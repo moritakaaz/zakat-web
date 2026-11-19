@@ -19,8 +19,8 @@ async function run(sql, params) {
 
 function persistMustahik(item) {
   return run(
-    'INSERT INTO mustahik (id, full_name, nik, address, occupation, monthly_income, dependents, school_children, house_condition, special_status, asnaf, document_status, period_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), nik = VALUES(nik), address = VALUES(address), occupation = VALUES(occupation), monthly_income = VALUES(monthly_income), dependents = VALUES(dependents), school_children = VALUES(school_children), house_condition = VALUES(house_condition), special_status = VALUES(special_status), asnaf = VALUES(asnaf), document_status = VALUES(document_status), period_id = VALUES(period_id)',
-    [item.id, item.fullName, item.nik || '', item.address, item.occupation, item.monthlyIncome || 0, item.dependents || 0, item.schoolChildren || 0, item.houseCondition, item.specialStatus, item.asnaf, item.documentStatus, item.periodId || 1]
+    'INSERT INTO mustahik (id, full_name, nik, address, occupation, monthly_income, dependents, school_children, house_condition, special_status, asnaf, document_status, surveyed, period_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), nik = VALUES(nik), address = VALUES(address), occupation = VALUES(occupation), monthly_income = VALUES(monthly_income), dependents = VALUES(dependents), school_children = VALUES(school_children), house_condition = VALUES(house_condition), special_status = VALUES(special_status), asnaf = VALUES(asnaf), document_status = VALUES(document_status), surveyed = VALUES(surveyed), period_id = VALUES(period_id)',
+    [item.id, item.fullName, item.nik || '', item.address, item.occupation, item.monthlyIncome || 0, item.dependents || 0, item.schoolChildren || 0, item.houseCondition, item.specialStatus, item.asnaf, item.documentStatus, item.surveyed ? 1 : 0, item.periodId || 1]
   )
 }
 
@@ -78,4 +78,11 @@ function persistRule(rule) {
   )
 }
 
-module.exports = { persistMustahik, deleteMustahik, persistReceipt, persistDistribution, persistApproval, persistMuzakki, deleteMuzakki, persistPeriod, persistRule }
+function persistAuditLog(entry) {
+  return run(
+    'INSERT INTO audit_log (actor_name, actor_role, action, target, detail) VALUES (?, ?, ?, ?, ?)',
+    [entry.actorName || '', entry.actorRole || '', entry.action || '', entry.target || '', entry.detail || '']
+  )
+}
+
+module.exports = { persistMustahik, deleteMustahik, persistReceipt, persistDistribution, persistApproval, persistMuzakki, deleteMuzakki, persistPeriod, persistRule, persistAuditLog }

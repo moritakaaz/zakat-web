@@ -47,7 +47,8 @@ Sistem mencakup pendataan mustahik dan muzakki. Sistem mencakup pencatatan pener
 ### 4.2 Data Mustahik
 
 - Tambah, ubah, hapus, dan cari data mustahik
-- Data yang disimpan meliputi nama kepala keluarga, alamat, pekerjaan, pendapatan per bulan, jumlah tanggungan, jumlah anak sekolah, kondisi rumah, status khusus, asnaf, dan dokumen
+- Data yang disimpan meliputi nama kepala keluarga, NIK 16 digit, alamat, pekerjaan, pendapatan per bulan, jumlah tanggungan, jumlah anak sekolah, kondisi rumah, status khusus, asnaf, dokumen, dan status survei lapangan
+- Data mustahik dan hasil prioritas dapat diunduh sebagai CSV untuk lampiran skripsi dan arsip TPQ
 - Data pendapatan per kapita dihitung otomatis dari pendapatan dibagi jumlah tanggungan
 
 ### 4.3 Data Muzakki
@@ -80,29 +81,32 @@ Sistem mencakup pendataan mustahik dan muzakki. Sistem mencakup pencatatan pener
 - Laporan daftar penerima berdasarkan prioritas
 - Laporan dapat dicetak
 - Arsip periode lalu dapat dibuka dan dicari
+- Riwayat perubahan data menampilkan siapa mengubah apa dan kapan
 
 ## 5 Aturan Rule-Based dan Forward Chaining
 
-Sistem menggunakan aturan IF THEN. Forward Chaining berarti sistem mulai dari fakta input lalu memeriksa aturan secara berurutan dari R01 sampai R14 sampai mendapat kesimpulan.
+Sistem menggunakan aturan IF THEN dengan kode yang sama dengan tabel aturan di database. Forward Chaining berarti sistem mulai dari fakta input lalu memeriksa aturan secara berurutan dari urutan terkecil. Aturan penjaga diperiksa pertama dan menghentikan proses untuk mustahik itu bila terpenuhi.
 
-- R01 Jika dokumen KTP atau KK tidak lengkap maka status menjadi Pending Verifikasi dan proses berhenti
-- R02 Jika nama sudah tercatat sebagai penerima pada periode yang sama maka status menjadi Duplikat dan proses berhenti
-- R03 Jika pendapatan per bulan kurang dari Rp 1.500.000 dan jumlah tanggungan 4 atau lebih maka hasil menjadi Prioritas 1
-- R04 Jika pendapatan per bulan kurang dari Rp 1.500.000 dan jumlah tanggungan 2 sampai 3 maka hasil menjadi Prioritas 1
-- R05 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 4 atau lebih maka status tanggungan berat ditegaskan dan dipakai sebagai penentu seri saat ranking, hasil akhir tetap mengikuti aturan pendapatan
-- R06 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 2 sampai 3 maka hasil menjadi Prioritas 2
-- R07 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 0 sampai 1 maka hasil menjadi Prioritas 3
-- R08 Jika pendapatan per bulan lebih dari Rp 2.500.000 dan jumlah tanggungan 4 atau lebih dan kondisi rumah tidak layak maka hasil menjadi Prioritas 2
-- R09 Jika pendapatan per bulan lebih dari Rp 2.500.000 dan jumlah tanggungan kurang dari 4 maka hasil menjadi Tidak Layak
-- R10 Jika status adalah guru honorer TPQ dengan honor kurang dari Rp 600.000 maka hasil menjadi Prioritas 1
-- R11 Jika status adalah janda atau dhuafa atau anak yatim dan pendapatan kurang dari Rp 2.500.000 maka status rentan ditegaskan dan dipakai sebagai penentu seri saat ranking, hasil akhir tetap mengikuti aturan pendapatan
-- R12 Jika kondisi adalah sakit kronis atau disabilitas dan tidak punya penghasilan tetap maka hasil menjadi Prioritas 1
-- R13 Jika dana tidak cukup untuk semua Prioritas 1 maka urutkan berdasarkan pendapatan per kapita terendah lalu jumlah tanggungan terbanyak
-- R14 Jika dana masih tersisa setelah Prioritas 1 terpenuhi maka lanjutkan ke Prioritas 2 lalu Prioritas 3
+- R10 Jika dokumen KTP atau KK tidak lengkap maka hasil menjadi Pending Verifikasi dan proses berhenti
+- R11 Jika NIK sama dengan data lain pada periode yang sama maka hasil menjadi Duplikat dan proses berhenti
+- R09 Jika pendapatan per bulan lebih dari Rp 2.500.000 maka hasil menjadi Tidak Layak dan proses berhenti
+- R01a Jika pendapatan per bulan kurang dari Rp 1.500.000 maka hasil dasar menjadi Prioritas 1
+- R01b Jika pendapatan per bulan Rp 1.500.000 sampai Rp 2.000.000 maka hasil dasar menjadi Prioritas 2
+- R01c Jika pendapatan per bulan Rp 2.000.001 sampai Rp 2.500.000 maka hasil dasar menjadi Prioritas 3
+- R02 Jika pendapatan per kapita kurang dari atau sama dengan Rp 300.000 maka hasil Prioritas 2 atau Prioritas 3 naik menjadi Prioritas 1
+- R03 Jika jumlah tanggungan 4 jiwa atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000 maka status tanggungan berat ditegaskan dan dicatat, hasil akhir tetap mengikuti aturan pendapatan
+- R04 Jika pekerjaan adalah guru honorer TPQ dengan honor Rp 300.000 sampai Rp 600.000 per bulan maka asnaf menjadi Fisabilillah dan hasil menjadi Prioritas 1
+- R05 Jika status adalah wali santri dan pendapatan kurang dari Rp 2.500.000 maka mustahik dinyatakan layak dipertimbangkan dan dievaluasi lanjut, hasil akhir tetap mengikuti aturan pendapatan
+- R06 Jika status adalah janda atau lansia atau yatim dan pendapatan kurang dari Rp 2.000.000 maka prioritas ditegaskan dan mustahik berhak santunan infaq, hasil akhir tetap mengikuti aturan pendapatan
+- R07 Jika kondisi rumah adalah kontrak atau menumpang maka kerentanan dicatat dan dipakai sebagai penentu seri saat ranking
+- R08 Jika jumlah anak sekolah 3 orang atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000 maka beban pendidikan tinggi dicatat dan dipakai sebagai penentu seri saat ranking
+- R12 Jika total dana tersedia kurang dari kebutuhan semua mustahik layak maka penyaluran diurutkan Prioritas 1 lalu Prioritas 2 lalu Prioritas 3
 
-Aturan disimpan sebagai data di tabel aturan, bukan hard code di dalam kode program. Perubahan aturan dapat dilakukan tanpa mengubah kode utama.
+Urutan ranking memakai prioritas terlebih dahulu, lalu pendapatan per kapita terendah sebagai penentu seri. R03, R05, R06, R07, dan R08 tidak menaikkan prioritas dengan sendirinya. Kelima aturan hanya menegaskan status dan dipakai sebagai penentu seri saat ranking. Bila aturan penegas dibaca sebagai peningkat tanpa syarat, hasil untuk 30 KK berubah menjadi Prioritas 1 sebanyak 22 KK dan Prioritas 3 menjadi 0 KK, sehingga tidak cocok dengan data acuan pada bagian 6. Hasil yang teruji adalah Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK.
 
-R05 dan R11 tidak menaikkan prioritas dengan sendirinya. Kedua aturan hanya menegaskan status dan dipakai sebagai penentu seri saat ranking. Bila kedua aturan dibaca sebagai peningkat tanpa syarat, hasil untuk 30 KK berubah menjadi Prioritas 1 sebanyak 22 KK dan Prioritas 3 menjadi 0 KK, sehingga tidak cocok dengan data acuan pada bagian 6. Hasil yang teruji adalah Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK.
+Aturan disimpan sebagai data di tabel aturan, bukan hard code di dalam kode program. Perubahan aturan dapat dilakukan tanpa mengubah kode utama. Jejak Forward Chaining menampilkan seluruh 14 aturan untuk setiap mustahik beserta catatan yang menyatakan fakta sebenarnya dari data mustahik itu.
+
+Validasi input yang dipakai mesin adalah NIK wajib 16 digit angka dan dinormalisasi sebelum cek duplikat, status khusus dan pekerjaan memakai pilihan tetap dan mesin mencocokkan satu kata utuh bukan sebagian teks. Cek duplikat hanya memakai NIK karena tidak ada field nomor KK di database atau di form. Setiap mustahik juga mempunyai status survei lapangan. Kepala TPQ tidak dapat menyetujui hasil periode bila masih ada mustahik Prioritas 1 sampai Prioritas 3 yang belum disurvei lapangan.
 
 ## 6 Data Acuan
 
@@ -143,6 +147,7 @@ Data acuan berasal dari wawancara dengan pengurus dan pencatatan buku bendahara 
 - special_status
 - asnaf
 - document_status
+- surveyed
 - period_id
 
 ### 7.3 muzakki
@@ -195,16 +200,27 @@ Penyaluran dapat ditujukan kepada satu mustahik atau kepada satu kelompok peneri
 - end_date
 - status
 
+### 7.8 audit_log
+
+- id
+- actor_name
+- actor_role
+- action
+- target
+- detail
+- created_at
+
 ## 8 Alur Proses
 
 1. Bendahara menginput data mustahik dan muzakki untuk periode berjalan
 2. Bendahara mencatat penerimaan zakat dari muzakki
 3. Bendahara menjalankan proses Rule-Based untuk semua mustahik pada periode tersebut
 4. Sistem menampilkan hasil prioritas beserta alasan aturan
-5. Kepala TPQ memeriksa dan menyetujui hasil prioritas
-6. Bendahara mencatat penyaluran sesuai urutan prioritas dan ketersediaan dana
-7. Sistem memperbarui sisa saldo secara otomatis
-8. Pengurus mencetak laporan dan menyimpan arsip periode
+5. Pengurus melakukan survei lapangan ke rumah mustahik dan menandai status survei pada data mustahik
+6. Kepala TPQ memeriksa dan menyetujui hasil prioritas. Persetujuan ditolak sistem bila masih ada mustahik Prioritas 1 sampai Prioritas 3 yang belum disurvei
+7. Bendahara mencatat penyaluran sesuai urutan prioritas dan ketersediaan dana
+8. Sistem memperbarui sisa saldo secara otomatis
+9. Pengurus mencetak laporan dan menyimpan arsip periode
 
 ## 9 Teknologi
 

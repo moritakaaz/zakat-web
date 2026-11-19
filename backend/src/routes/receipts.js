@@ -2,6 +2,7 @@ const express = require('express')
 const { store } = require('../store')
 const { requireRoles } = require('../auth/auth')
 const { persistReceipt } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 
@@ -16,6 +17,7 @@ router.post('/', requireRoles('bendahara', 'sekretaris'), (req, res) => {
   const item = { periodId: 1, ...req.body, id: 'RC' + String(nextNumber).padStart(2, '0'), periodId: Number((req.body || {}).periodId || 1) }
   store.receipts.push(item)
   persistReceipt(item)
+  logAudit(req, 'Catat penerimaan', item.id + ' ' + (item.zakatType || ''), (item.name || '') + ' ' + (item.form || '') + ' ' + (item.amountMoney ? 'Rp ' + item.amountMoney : '') + (item.quantityKg ? item.quantityKg + ' kg' : ''))
   res.status(201).json({ data: item })
 })
 

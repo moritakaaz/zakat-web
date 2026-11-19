@@ -15,7 +15,7 @@
     "dev": "node --watch src/index.js",
     "seed": "node src/seed/seed.js",
     "start": "node src/index.js",
-    "test": "node src/engine/ruleEngine.test.js && node src/auth/auth.test.js && node src/apiAuth.test.js && node src/db/db.test.js && node src/db/db.empty.test.js && node src/upgrades.test.js",
+    "test": "node src/engine/ruleEngine.test.js && node src/auth/auth.test.js && node src/apiAuth.test.js && node src/db/db.test.js && node src/db/db.empty.test.js && node src/upgrades.test.js && node src/audit.test.js",
     "test:smoke": "node ../frontend/scripts/smoke.mjs"
   },
   "version": "0.1.0"

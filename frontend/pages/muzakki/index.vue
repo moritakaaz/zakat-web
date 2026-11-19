@@ -185,6 +185,9 @@
           <template #name-header>
             <SortButton label="Kelompok Penerima" column="name" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
           </template>
+          <template #form-header>
+            <SortButton label="Bentuk" column="form" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
           <template #quantityKg-header>
             <SortButton label="Beras (kg)" column="quantityKg" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
           </template>
@@ -320,13 +323,13 @@ const receiptColumns = [
   { accessorKey: 'name', header: 'Muzakki' },
   { accessorKey: 'form', header: 'Bentuk' },
   { accessorKey: 'quantityKg', header: 'Beras (kg)' },
-  { accessorKey: 'amountMoney', header: 'Nilai Uang' },
-  { accessorKey: 'note', header: 'Keterangan' }
+  { accessorKey: 'amountMoney', header: 'Nilai Uang' }
 ]
 const distributionColumns = [
   { accessorKey: 'date', header: 'Tanggal' },
   { accessorKey: 'zakatType', header: 'Jenis Zakat' },
   { accessorKey: 'name', header: 'Kelompok Penerima' },
+  { accessorKey: 'form', header: 'Bentuk' },
   { accessorKey: 'quantityKg', header: 'Beras (kg)' },
   { accessorKey: 'amountMoney', header: 'Nilai Uang' }
 ]

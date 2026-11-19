@@ -94,6 +94,41 @@ const pairNiks = pair.map((item) => item.nik)
 assert.strictEqual(evaluateMustahik(pair[0], pairNiks, rules).result, 'Duplikat')
 assert.strictEqual(evaluateMustahik(pair[1], pairNiks, rules).result, 'Duplikat')
 
+// The same NIK written with spaces still counts as one NIK.
+const spaced = [
+  household('KA03', { monthlyIncome: 1000000, nik: '3172010101010001' }),
+  household('KA04', { monthlyIncome: 1000000, nik: '3172 0101 0101 0001' })
+]
+const spacedNiks = spaced.map((item) => item.nik)
+assert.strictEqual(evaluateMustahik(spaced[0], spacedNiks, rules).result, 'Duplikat')
+assert.strictEqual(evaluateMustahik(spaced[1], spacedNiks, rules).result, 'Duplikat')
+
+// Status and occupation match whole tokens only, never substrings.
+const tricky = household('TB01', { monthlyIncome: 1000000, dependents: 2, specialStatus: 'Bukan Janda' })
+assert.ok(!evaluateMustahik(tricky, [tricky.nik], rules).firedRules.includes('R06'))
+const richWidow = household('TB02', { monthlyIncome: 1000000, dependents: 2, specialStatus: 'Janda Tapi Kaya sebenarnya' })
+assert.ok(!evaluateMustahik(richWidow, [richWidow.nik], rules).firedRules.includes('R06'))
+const formerTeacher = household('TB03', { monthlyIncome: 500000, dependents: 2, occupation: 'Mantan Guru Honorer TPQ' })
+assert.ok(!evaluateMustahik(formerTeacher, [formerTeacher.nik], rules).firedRules.includes('R04'))
+const realWidow = household('TB04', { monthlyIncome: 1000000, dependents: 2, specialStatus: 'Janda, Wali Santri' })
+const realWidowEval = evaluateMustahik(realWidow, [realWidow.nik], rules)
+assert.ok(realWidowEval.firedRules.includes('R06'))
+assert.ok(realWidowEval.firedRules.includes('R05'))
+
+// R09 has no dependents exception. Income above the limit is not layak.
+const bigFamily = household('TB05', { monthlyIncome: 3000000, dependents: 6 })
+assert.strictEqual(evaluateMustahik(bigFamily, [bigFamily.nik], rules).result, 'Tidak Layak')
+
+// A fully evaluated household shows every rule in the trace, including
+// all three income bands and the R12 ranking note.
+const full = evaluateMustahik(household('T02', { monthlyIncome: 1000000, dependents: 2 }), ['NIK-T02'], rules)
+assert.strictEqual(full.trace.length, 14)
+assert.ok(full.trace.some((step) => step.code === 'R01b' && step.fired === false))
+assert.ok(full.trace.some((step) => step.code === 'R01c' && step.fired === false))
+assert.ok(full.trace.some((step) => step.code === 'R12' && step.fired === null))
+// Trace notes state the actual fact.
+assert.strictEqual(full.trace.find((step) => step.code === 'R10').note, 'Dokumen lengkap')
+
 // With no rules loaded, no rule fires and no threshold is invented.
 const noRules = evaluateMustahik(household('KK99', { monthlyIncome: 100 }), ['NIK-KK99'], [])
 assert.strictEqual(noRules.result, 'Tidak Layak')

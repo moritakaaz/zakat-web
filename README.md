@@ -29,7 +29,7 @@ npm start
 
 Backend berjalan di port 3001. Buka alamat health di browser untuk memastikan backend hidup. Bila MySQL belum dipasang, backend tetap jalan tetapi tidak menampilkan data apa pun dan memberi tahu lewat health bahwa database belum terhubung.
 
-Untuk membuat database MySQL secara manual, jalankan perintah seed berikut dari folder backend. Perintah itu menjalankan file db schema sql lalu file db seed sql. Jangan jalankan kedua file itu di MySQL lalu menjalankan npm run seed karena data seed akan dimasukkan dua kali dan gagal duplikat.
+Untuk membuat database MySQL secara manual, jalankan perintah seed berikut dari folder backend. Perintah itu menjalankan file db schema sql lalu file db seed sql. Perintah seed aman dijalankan ulang karena memakai INSERT IGNORE, sehingga baris yang sudah ada dilewati dan hanya baris yang belum ada yang ditambahkan. Perintah seed tidak mengubah baris yang sudah ada, jadi perubahan isi seed seperti NIK baru tetap membutuhkan hapus database lalu seed ulang.
 
 ```
 npm run seed
@@ -43,7 +43,7 @@ Bila Docker sudah terpasang, jalankan MySQL dari folder proyek dengan perintah b
 docker compose up -d mysql
 ```
 
-Perintah itu membuat database zakat_al_fawwaz beserta skema dan data awal 30 KK secara otomatis pada pertama kali volume dibuat. Jangan jalankan npm run seed lagi setelah docker compose up karena data seed sudah masuk dan perintah itu akan gagal duplikat. Perintah npm run seed hanya dipakai bila MySQL dipasang manual tanpa Docker.
+Perintah itu membuat database zakat_al_fawwaz beserta skema dan data awal 30 KK secara otomatis pada pertama kali volume dibuat. Perintah npm run seed hanya dipakai bila MySQL dipasang manual tanpa Docker, dan aman dijalankan ulang karena baris yang sudah ada dilewati.
 
 Lalu jalankan backend seperti biasa. Backend memakai MySQL bila database terhubung dan memberi tahu lewat health bila database belum terhubung. Bila MySQL belum tersedia, backend tetap jalan dalam mode memori tetapi toko data kosong. Mode memori hanya berarti database belum terhubung, bukan untuk produksi.
 
@@ -55,6 +55,7 @@ Bagian ini menjelaskan isi database pada tiap keadaan agar tidak ada data yang m
 - Seed sql atau npm run seed berarti data acuan Excel masuk. Isinya 30 KK dengan Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK, ditambah 6 muzakki, 10 baris penerimaan, 8 baris penyaluran, 14 aturan, 2 periode, dan 3 akun demo.
 - Data seed berisi 10 baris penerimaan dengan beras 130 kg dan uang Rp 7.450.000 serta 8 baris penyaluran dengan beras 130 kg dan uang Rp 6.800.000. Sisa saldo uang acuan adalah Rp 650.000 dan sisa beras acuan adalah 0 kg.
 - Perubahan skema pada versi baru tidak diterapkan oleh schema sql pada database lama karena schema sql memakai IF NOT EXISTS. Setelah menarik versi dengan perubahan skema, hapus dulu databasenya lalu jalankan npm run seed agar tabel baru terbentuk dan data seed masuk.
+- Perubahan isi seed sql juga membutuhkan seed ulang dengan cara yang sama, karena seed sql memakai INSERT IGNORE yang hanya menambah baris yang belum ada dan tidak mengubah baris yang sudah ada. Versi ini mengubah isi seed sql pada NIK dan teks aturan, jadi seed ulang diperlukan agar data lama yang masih bertopeng dan teks aturan lama tidak tertinggal.
 - Docker compose up pada volume baru membuat skema dan data seed otomatis. Menjalankan schema sql lagi pada database yang sudah berisi data tidak menghapus data karena schema sql memakai IF NOT EXISTS dan tidak berisi INSERT atau DELETE.
 - Untuk mulai dari kosong pada database yang sudah terisi seed, hapus dulu databasenya lalu jalankan schema sql saja. Pada MySQL manual, jalankan DROP DATABASE zakat_al_fawwaz lalu jalankan schema sql. Pada Docker, jalankan docker compose down -v untuk menghapus volume. Volume baru yang dibuat oleh up berikutnya selalu menjalankan seed otomatis, jadi untuk database kosong, hapus database hasil seed dengan DROP DATABASE lalu jalankan schema sql saja.
 
@@ -163,6 +164,24 @@ Data acuan berasal dari periode Ramadan 1446 H.
 
 Mesin rule memakai 14 aturan dari file data acuan. Aturan diperiksa berurutan dari penjaga dokumen dan duplikat, lalu ambang pendapatan, lalu per kapita dan tanggungan, lalu status khusus, lalu penentu seri, dan terakhir aturan penyaluran bila dana terbatas. Aturan R05 dan R11 pada PRD bagian 5 diterapkan sebagai penegasan dan penentu seri, bukan sebagai peningkat prioritas tanpa syarat. Tanpa penafsiran ini, hasil untuk 30 KK berubah menjadi Prioritas 1 sebanyak 22 KK dan Prioritas 3 menjadi 0 KK, sehingga tidak cocok dengan data acuan pada PRD bagian 6. Aturan disimpan sebagai data di tabel aturan agar ambang dapat diubah tanpa mengubah kode utama.
 
+## Validasi Data dan Jejak
+
+- NIK wajib 16 digit angka, ditulis lengkap di semua tampilan dan di data acuan. Spasi dan tanda hubung dihapus sebelum cek duplikat, dan NIK ganda pada periode yang sama ditolak saat simpan dengan pesan yang jelas.
+- Status khusus memakai pilihan tetap Janda, Lansia, Yatim, Wali Santri, dan Guru Honorer TPQ. Pekerjaan memakai pilihan tetap dari daftar pekerjaan yang umum di Warakas, dengan pilihan Lainnya untuk pekerjaan di luar daftar.
+- Mesin mencocokkan satu kata utuh dari pilihan tersebut, bukan sebagian teks. Teks seperti Bukan Janda atau Janda Tapi Kaya tidak lagi dihitung sebagai Janda, dan Mantan Guru Honorer TPQ tidak lagi dihitung sebagai guru honorer TPQ.
+- Jejak Forward Chaining menampilkan seluruh 14 aturan, termasuk ketiga pita pendapatan R01a, R01b, dan R01c serta aturan ranking R12 sebagai catatan informasi. Catatan tiap aturan menyatakan fakta sebenarnya dari data mustahik itu, misalnya Dokumen lengkap bila dokumen lengkap dan NIK tidak ganda bila NIK tidak ganda.
+- Aturan R09 tidak lagi memakai pengecualian kondisi khusus. Pendapatan lebih dari Rp 2.500.000 per bulan selalu menghasilkan Tidak Layak.
+- Form memberi peringatan bila asnaf Fisabilillah dipilih tetapi pekerjaan bukan guru honorer TPQ, bila pekerjaan tercatat tetapi pendapatan Rp 0, dan bila jumlah anak sekolah lebih dari jumlah tanggungan. Peringatan tidak menghalangi simpan, hanya meminta pengurus memeriksa lagi datanya.
+- Tabel Data Mustahik menampilkan kolom NIK lengkap, dan jejak per KK menampilkan seluruh isi form termasuk alamat, anak sekolah, dokumen, status khusus, dan asnaf. Tabel penerimaan tidak lagi menampilkan kolom Keterangan yang tidak ada datanya, dan tabel penyaluran menampilkan kolom Bentuk sesuai form. Tanggal persetujuan Kepala TPQ ditampilkan sebagai tanggal Indonesia, dan status periode ditampilkan sebagai Aktif atau Tutup.
+- Kartu ringkasan di halaman Hasil Prioritas dan Proses Rule memakai ikon sesuai status supaya mudah dibedakan sekilas.
+
+## Survei Lapangan, Ekspor CSV, dan Riwayat Perubahan
+
+- Setiap mustahik mempunyai status survei lapangan yang diisi lewat form dan ditampilkan sebagai badge Sudah atau Belum pada tabel Data Mustahik. Data acuan Ramadan 1446 H sudah ditandai sebagai sudah disurvei, sedangkan data baru berstatus belum disurvei sampai pengurus mencentangnya.
+- Kepala TPQ tidak dapat menyetujui hasil periode bila masih ada mustahik Prioritas 1 sampai Prioritas 3 yang belum disurvei lapangan. Sistem menolak persetujuan dan menampilkan nama mustahik yang belum disurvei, supaya tidak ada penyaluran sebelum data diperiksa langsung di lapangan.
+- Data mustahik dan hasil prioritas dapat diunduh sebagai CSV dari halaman Data Mustahik dan Hasil Prioritas. Berkas memakai pemisah titik koma supaya terbuka benar di Excel Indonesia, dan memakai BOM UTF-8 supaya huruf Indonesia tampil benar.
+- Setiap perubahan data dicatat di tabel audit_log beserta nama pengguna, peran, aksi, target, dan waktunya. Riwayat 20 perubahan terakhir tampil di halaman Laporan dan mencakup tambah, ubah, dan hapus mustahik dan muzakki, pencatatan penerimaan dan penyaluran, perubahan aturan, pembuatan dan penutupan periode, serta persetujuan dan penolakan hasil.
+
 ## Pengujian
 
 Jalankan seluruh pengujian backend dari folder backend dengan perintah berikut.
@@ -171,7 +190,7 @@ Jalankan seluruh pengujian backend dari folder backend dengan perintah berikut.
 npm test
 ```
 
-Pengujian mencakup mesin rule, autentikasi JWT, login dan perlindungan rute lewat API, persetujuan Kepala TPQ, dan toko data kosong bila MySQL tidak tersedia. Pengujian upgrade mencakup aturan yang dapat diubah, pembuatan dan penutupan periode, CRUD mustahik dan muzakki beserta batasan peran, duplikat NIK, pengaman penyaluran berupa persetujuan dan sisa saldo, serta dashboard per periode. Pengujian memakai data contoh kecil yang ditulis di dalam file pengujian dan tidak memakai data hard code dari kode aplikasi.
+Pengujian mencakup mesin rule, autentikasi JWT, login dan perlindungan rute lewat API, persetujuan Kepala TPQ, dan toko data kosong bila MySQL tidak tersedia. Pengujian upgrade mencakup aturan yang dapat diubah, pembuatan dan penutupan periode, CRUD mustahik dan muzakki beserta batasan peran, duplikat NIK, pengaman penyaluran berupa persetujuan dan sisa saldo, serta dashboard per periode. Pengujian audit mencakup gerbang survei pada persetujuan dan pencatatan riwayat perubahan. Pengujian memakai data contoh kecil yang ditulis di dalam file pengujian dan tidak memakai data hard code dari kode aplikasi.
 
 Pemeriksaan tampilan frontend dijalankan dari folder frontend dengan perintah berikut.
 

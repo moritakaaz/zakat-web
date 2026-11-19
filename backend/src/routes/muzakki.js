@@ -2,6 +2,7 @@ const express = require('express')
 const { store } = require('../store')
 const { requireRoles } = require('../auth/auth')
 const { persistMuzakki, deleteMuzakki } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 const canInput = requireRoles('bendahara', 'sekretaris')
@@ -32,6 +33,7 @@ router.post('/', canInput, (req, res) => {
   const item = { periodId: 1, id: 'MZ' + String(next).padStart(2, '0'), ...body, periodId: Number(body.periodId || 1) }
   store.muzakki.push(item)
   persistMuzakki(item)
+  logAudit(req, 'Tambah muzakki', item.id + ' ' + item.fullName, item.zakatType || '')
   res.status(201).json({ data: item })
 })
 
@@ -40,14 +42,17 @@ router.put('/:id', canInput, (req, res) => {
   if (index < 0) return res.status(404).json({ error: 'Muzakki not found' })
   store.muzakki[index] = { ...store.muzakki[index], ...req.body }
   persistMuzakki(store.muzakki[index])
+  logAudit(req, 'Ubah muzakki', store.muzakki[index].id + ' ' + store.muzakki[index].fullName, store.muzakki[index].zakatType || '')
   res.json({ data: store.muzakki[index] })
 })
 
 router.delete('/:id', requireRoles('bendahara'), (req, res) => {
   const index = store.muzakki.findIndex((row) => row.id === req.params.id)
   if (index < 0) return res.status(404).json({ error: 'Muzakki not found' })
+  const removed = store.muzakki[index]
   store.muzakki.splice(index, 1)
   deleteMuzakki(req.params.id)
+  logAudit(req, 'Hapus muzakki', removed.id + ' ' + removed.fullName, removed.zakatType || '')
   res.json({ data: true })
 })
 

@@ -2,7 +2,7 @@ export interface Mustahik { id: string, fullName: string, nik: string, address: 
 
 export interface TraceStep {
   code: string
-  fired: boolean
+  fired: boolean | null
   note: string
 }
 
@@ -47,6 +47,22 @@ export function perCapita(item: Mustahik): number {
   return Math.floor(item.monthlyIncome / item.dependents)
 }
 
+function statusTokens(item: Mustahik): string[] {
+  return String(item.specialStatus || '').split(',').map((token) => token.trim().toLowerCase()).filter(Boolean)
+}
+
+function hasStatus(item: Mustahik, keyword: string): boolean {
+  return statusTokens(item).includes(keyword.toLowerCase())
+}
+
+function isTeacher(item: Mustahik): boolean {
+  return String(item.occupation || '').trim().toLowerCase() === 'guru honorer tpq'
+}
+
+function normalizeNik(value: string): string {
+  return String(value || '').replace(/[\s-]/g, '')
+}
+
 function findRule(rules: RuleConfig[] | undefined, code: string): RuleConfig | undefined {
   return (rules || []).find((item) => item.code === code)
 }
@@ -74,7 +90,8 @@ export function evaluateMustahik(item: Mustahik, knownNiks: string[], rules?: Ru
   const capita = perCapita(item)
   let result: string | null = null
 
-  function check(code: string, firedNow: boolean, note: string): boolean {
+  function check(code: string, firedNow: boolean, firedNote: string, unfiredNote: string): boolean {
+    const note = firedNow ? firedNote : unfiredNote
     trace.push({ code, fired: firedNow, note })
     if (firedNow) {
       fired.push(code)
@@ -96,17 +113,18 @@ export function evaluateMustahik(item: Mustahik, knownNiks: string[], rules?: Ru
     }
   }
 
-  if (active(rules, 'R10') && check('R10', item.documentStatus !== 'Lengkap', 'Dokumen belum lengkap')) {
+  if (active(rules, 'R10') && check('R10', item.documentStatus !== 'Lengkap', 'Dokumen belum lengkap', 'Dokumen lengkap')) {
     return finish('Pending Verifikasi')
   }
 
-  const duplicate = knownNiks.filter((n) => n === item.nik).length > 1
-  if (active(rules, 'R11') && check('R11', duplicate, 'NIK atau nomor KK tercatat ganda')) {
+  const nik = normalizeNik(item.nik)
+  const duplicate = nik !== '' && knownNiks.filter((n) => normalizeNik(n) === nik).length > 1
+  if (active(rules, 'R11') && check('R11', duplicate, 'NIK tercatat ganda pada periode ini', 'NIK tidak ganda')) {
     return finish('Duplikat')
   }
 
   const upper = limit(rules, 'R09', 'incomeLimit')
-  if (active(rules, 'R09') && check('R09', upper !== undefined && income > upper && dependents < 6, 'Pendapatan di atas ambang Warakas')) {
+  if (active(rules, 'R09') && check('R09', upper !== undefined && income > upper, 'Pendapatan di atas ambang Warakas', 'Pendapatan ' + moneyText(income))) {
     return finish('Tidak Layak')
   }
 
@@ -115,42 +133,42 @@ export function evaluateMustahik(item: Mustahik, knownNiks: string[], rules?: Ru
   const midLimit = limit(rules, 'R01b', 'incomeLimit')
   const highMin = limit(rules, 'R01c', 'incomeMin')
   const highLimit = limit(rules, 'R01c', 'incomeLimit')
-  if (active(rules, 'R01a') && check('R01a', lowLimit !== undefined && income < lowLimit, lowLimit !== undefined ? 'Pendapatan kurang dari ' + moneyText(lowLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 1'
-  } else if (active(rules, 'R01b') && check('R01b', midMin !== undefined && midLimit !== undefined && income >= midMin && income <= midLimit, midMin !== undefined && midLimit !== undefined ? 'Pendapatan ' + moneyText(midMin) + ' sampai ' + moneyText(midLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 2'
-  } else if (active(rules, 'R01c') && check('R01c', highMin !== undefined && highLimit !== undefined && income >= highMin && income <= highLimit, highMin !== undefined && highLimit !== undefined ? 'Pendapatan ' + moneyText(highMin) + ' sampai ' + moneyText(highLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 3'
-  }
+  const bandA = active(rules, 'R01a') && check('R01a', lowLimit !== undefined && income < lowLimit, lowLimit !== undefined ? 'Pendapatan kurang dari ' + moneyText(lowLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  const bandB = active(rules, 'R01b') && check('R01b', midMin !== undefined && midLimit !== undefined && income >= midMin && income <= midLimit, midMin !== undefined && midLimit !== undefined ? 'Pendapatan ' + moneyText(midMin) + ' sampai ' + moneyText(midLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  const bandC = active(rules, 'R01c') && check('R01c', highMin !== undefined && highLimit !== undefined && income >= highMin && income <= highLimit, highMin !== undefined && highLimit !== undefined ? 'Pendapatan ' + moneyText(highMin) + ' sampai ' + moneyText(highLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  if (bandA) result = 'Prioritas 1'
+  else if (bandB) result = 'Prioritas 2'
+  else if (bandC) result = 'Prioritas 3'
 
   const capitaLimit = limit(rules, 'R02', 'perCapitaLimit')
-  if (active(rules, 'R02') && check('R02', capitaLimit !== undefined && capita <= capitaLimit, 'Pendapatan per kapita ' + moneyText(capita))) {
+  if (active(rules, 'R02') && check('R02', capitaLimit !== undefined && capita <= capitaLimit, 'Pendapatan per kapita ' + moneyText(capita), 'Pendapatan per kapita ' + moneyText(capita) + ', di atas batas ' + (capitaLimit !== undefined ? moneyText(capitaLimit) : '-'))) {
     if (result === 'Prioritas 2' || result === 'Prioritas 3') result = 'Prioritas 1'
   }
 
   const dependentsMin = limit(rules, 'R03', 'dependentsMin')
   const heavyLimit = limit(rules, 'R03', 'incomeLimit')
-  if (active(rules, 'R03')) check('R03', dependentsMin !== undefined && heavyLimit !== undefined && dependents >= dependentsMin && income <= heavyLimit, 'Tanggungan berat')
+  if (active(rules, 'R03')) check('R03', dependentsMin !== undefined && heavyLimit !== undefined && dependents >= dependentsMin && income <= heavyLimit, 'Tanggungan berat', 'Tanggungan ' + dependents + ' jiwa')
 
-  const isTeacher = (item.occupation || '').includes('Guru Honorer TPQ')
   const honorMin = limit(rules, 'R04', 'honorMin')
   const honorMax = limit(rules, 'R04', 'honorMax')
-  if (active(rules, 'R04') && check('R04', honorMin !== undefined && honorMax !== undefined && isTeacher && income >= honorMin && income <= honorMax, 'Guru honorer TPQ')) {
+  if (active(rules, 'R04') && check('R04', honorMin !== undefined && honorMax !== undefined && isTeacher(item) && income >= honorMin && income <= honorMax, 'Guru honorer TPQ', 'Pekerjaan ' + (item.occupation || '-'))) {
     result = 'Prioritas 1'
   }
 
   const waliLimit = limit(rules, 'R05', 'incomeLimit')
-  if (active(rules, 'R05')) check('R05', waliLimit !== undefined && (item.specialStatus || '').includes('Wali Santri') && income < waliLimit, 'Wali santri')
+  if (active(rules, 'R05')) check('R05', waliLimit !== undefined && hasStatus(item, 'Wali Santri') && income < waliLimit, 'Wali santri', 'Status khusus ' + (item.specialStatus || '-'))
 
-  const vulnerable = (item.specialStatus || '').includes('Janda') || (item.specialStatus || '').includes('Lansia') || (item.specialStatus || '').includes('Yatim')
+  const vulnerable = hasStatus(item, 'Janda') || hasStatus(item, 'Lansia') || hasStatus(item, 'Yatim')
   const vulnerableLimit = limit(rules, 'R06', 'incomeLimit')
-  if (active(rules, 'R06')) check('R06', vulnerableLimit !== undefined && vulnerable && income < vulnerableLimit, 'Kelompok rentan')
+  if (active(rules, 'R06')) check('R06', vulnerableLimit !== undefined && vulnerable && income < vulnerableLimit, 'Kelompok rentan', 'Status khusus ' + (item.specialStatus || '-'))
 
-  if (active(rules, 'R07')) check('R07', item.houseCondition === 'Kontrak' || item.houseCondition === 'Menumpang', 'Rumah kontrak atau menumpang')
+  if (active(rules, 'R07')) check('R07', item.houseCondition === 'Kontrak' || item.houseCondition === 'Menumpang', 'Rumah kontrak atau menumpang', 'Rumah ' + (item.houseCondition || '-'))
 
   const schoolMin = limit(rules, 'R08', 'schoolMin')
   const schoolLimit = limit(rules, 'R08', 'incomeLimit')
-  if (active(rules, 'R08')) check('R08', schoolMin !== undefined && schoolLimit !== undefined && (item.schoolChildren || 0) >= schoolMin && income <= schoolLimit, 'Beban pendidikan tinggi')
+  if (active(rules, 'R08')) check('R08', schoolMin !== undefined && schoolLimit !== undefined && (item.schoolChildren || 0) >= schoolMin && income <= schoolLimit, 'Beban pendidikan tinggi', 'Anak sekolah ' + (item.schoolChildren || 0) + ' orang')
+
+  if (active(rules, 'R12')) trace.push({ code: 'R12', fired: null, note: 'Penyaluran diurutkan Prioritas 1, lalu 2, lalu 3 bila dana kurang' })
 
   return finish(result || 'Tidak Layak')
 }

@@ -5,7 +5,7 @@
 
     <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
-      <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" />
+      <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
     </div>
 
     <UCard class="shadow-sm ring-slate-200 mt-4">
@@ -21,8 +21,9 @@
           <UBadge :color="approval.status === 'approved' ? 'success' : approval.status === 'rejected' ? 'error' : 'warning'" variant="soft" size="lg">{{ approvalLabel }}</UBadge>
         </div>
       </template>
-      <p v-if="approval.approverName" class="text-sm text-slate-500 mt-2">Diputuskan oleh {{ approval.approverName }} pada {{ approval.decidedAt || '-' }}</p>
+      <p v-if="approval.approverName" class="text-sm text-slate-500 mt-2">Diputuskan oleh {{ approval.approverName }} pada {{ formatDateTime(approval.decidedAt) }}</p>
       <p v-if="approval.note" class="text-sm mt-1">Catatan {{ approval.note }}</p>
+      <UAlert v-if="unsurveyedCount > 0 && approval.status !== 'approved'" color="warning" variant="soft" :title="'Masih ada ' + unsurveyedCount + ' KK Prioritas 1 sampai 3 yang belum disurvei lapangan. Kepala TPQ belum dapat menyetujui hasil ini sampai semuanya ditandai Sudah disurvei.'" icon="i-lucide-triangle-alert" class="mt-3" />
       <p v-if="approvalError" class="text-sm text-red-600 mt-2">{{ approvalError }}</p>
       <div v-if="isKepala" class="flex flex-col gap-2 mt-4">
         <UInput v-model="approvalNote" placeholder="Catatan persetujuan, boleh dikosongkan" class="w-full" />
@@ -38,7 +39,10 @@
       <template #header>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="font-semibold text-slate-900">Ranking penerima</h2>
-          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-download" @click="download">Unduh Laporan</UButton>
+          <div class="flex gap-2">
+            <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-file-spreadsheet" @click="downloadCsvFile">Unduh CSV</UButton>
+            <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-download" @click="download">Unduh Laporan</UButton>
+          </div>
         </div>
       </template>
       <div class="overflow-x-auto">
@@ -82,10 +86,11 @@
 
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
-import { formatMoney } from '~/utils/format'
+import { formatMoney, formatDateTime, summaryCardMeta } from '~/utils/format'
+import { downloadCsv, fileNameSlug } from '~/utils/csv'
 import { useTableSort, resultRank } from '~/utils/tableSort'
 
-const { evaluations, summary, loadError, loadAll } = useZakatData()
+const { mustahik, evaluations, summary, loadError, loadAll } = useZakatData()
 const { user, authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
@@ -118,6 +123,10 @@ const approvalLabel = computed(() => {
   return 'Menunggu Persetujuan'
 })
 const isKepala = computed(() => user.value?.role === 'kepala')
+const unsurveyedCount = computed(() => {
+  const byId = new Map(mustahik.value.map((row: any) => [row.id, row]))
+  return evaluations.value.filter((item: any) => ['Prioritas 1', 'Prioritas 2', 'Prioritas 3'].includes(item.result) && byId.get(item.id)?.surveyed !== true).length
+})
 
 async function loadApproval() {
   try {
@@ -137,7 +146,8 @@ async function decide(action: string) {
     body: JSON.stringify({ note: approvalNote.value })
   })
   if (!res.ok) {
-    approvalError.value = 'Gagal menyimpan keputusan. Pastikan Anda masuk sebagai Kepala TPQ.'
+    const body = await res.json().catch(() => null)
+    approvalError.value = (body && body.error) || 'Gagal menyimpan keputusan. Pastikan Anda masuk sebagai Kepala TPQ.'
     return
   }
   const body = await res.json()
@@ -148,6 +158,12 @@ onMounted(async () => {
   await loadAll(authFetch)
   await loadApproval()
 })
+
+function downloadCsvFile() {
+  const headers = ['Urutan', 'Kode', 'Nama Kepala Keluarga', 'Per Kapita', 'Aturan Terpenuhi', 'Hasil']
+  const rows = evaluations.value.map((item: any, index: number) => [index + 1, item.id, item.fullName, item.perCapita, item.firedRules.join(', '), item.result])
+  downloadCsv('hasil-prioritas-' + fileNameSlug(periodName.value) + '.csv', headers, rows)
+}
 
 function download() {
   const lines = ['Hasil Prioritas Mustahik ' + periodName.value, '']

@@ -48,6 +48,7 @@ app.use('/api/distributions', require('./routes/distributions'))
 app.use('/api/rules', require('./routes/rules'))
 app.use('/api/periods', require('./routes/periods'))
 app.use('/api/approvals', require('./routes/approvals'))
+app.use('/api/audit-log', require('./routes/auditLog'))
 
 const port = Number(process.env.PORT || 3001)
 if (require.main === module) {

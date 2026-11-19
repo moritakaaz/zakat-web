@@ -21,6 +21,14 @@ async function main() {
     const schema = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8')
     const seed = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'seed.sql'), 'utf8')
     await connection.query(schema)
+    // Existing databases seeded before the surveyed column keep
+    // working. Add the column when it is missing, ignore it when
+    // it already exists.
+    try {
+      await connection.query('ALTER TABLE mustahik ADD COLUMN surveyed TINYINT(1) NOT NULL DEFAULT 0')
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') throw error
+    }
     await connection.query(seed)
     console.log('Database seeded')
   } finally {

@@ -14,7 +14,8 @@ const store = {
   rules: [],
   users: [],
   periods: [],
-  approvals: []
+  approvals: [],
+  auditLog: []
 }
 
 function evaluateAll(periodId) {

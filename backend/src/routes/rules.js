@@ -2,6 +2,7 @@ const express = require('express')
 const { store, evaluateAll } = require('../store')
 const { requireRoles } = require('../auth/auth')
 const { persistRule } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 const numericFields = ['incomeMin', 'incomeLimit', 'perCapitaLimit', 'dependentsMin', 'honorMin', 'honorMax', 'schoolMin']
@@ -27,6 +28,7 @@ router.put('/:code', requireRoles('bendahara'), (req, res) => {
     else if (typeof body[field] === 'number' && body[field] >= 0) rule[field] = body[field]
   }
   persistRule(rule)
+  logAudit(req, 'Ubah aturan', rule.code, rule.condition)
   res.json({ data: rule })
 })
 

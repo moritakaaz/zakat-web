@@ -60,7 +60,7 @@
         <h2 class="font-semibold text-slate-900">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
       </template>
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" />
+        <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
       </div>
       <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
       <div v-if="example" class="flex flex-wrap gap-2 mt-4">
@@ -71,7 +71,7 @@
       <ol v-if="example" class="mt-3 flex flex-col gap-2 text-sm">
         <li v-for="step in filteredExampleTrace" :key="step.code" class="flex gap-2 items-center">
           <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-          <UBadge :color="step.fired ? 'success' : 'error'" variant="soft">{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }}</UBadge>
+          <UBadge :color="step.fired === true ? 'success' : step.fired === false ? 'error' : 'neutral'" variant="soft">{{ step.fired === true ? 'Terpenuhi' : step.fired === false ? 'Tidak terpenuhi' : 'Info' }}</UBadge>
           <span>{{ step.note }}</span>
         </li>
       </ol>
@@ -85,6 +85,7 @@
 <script setup lang="ts">
 import { useZakatData, useSession, useRules, usePeriod } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
+import { summaryCardMeta } from '~/utils/format'
 
 const { mustahik, periodMustahik, summary, loadError: dataLoadError, loadAll } = useZakatData()
 const { authFetch, canRunRules } = useSession()
@@ -118,12 +119,12 @@ const example = computed(() => {
 const exampleFilter = ref('Semua')
 const filteredExampleTrace = computed(() => {
   if (!example.value) return []
-  if (exampleFilter.value === 'Terpenuhi') return example.value.trace.filter((step: any) => step.fired)
-  if (exampleFilter.value === 'Tidak terpenuhi') return example.value.trace.filter((step: any) => !step.fired)
+  if (exampleFilter.value === 'Terpenuhi') return example.value.trace.filter((step: any) => step.fired === true)
+  if (exampleFilter.value === 'Tidak terpenuhi') return example.value.trace.filter((step: any) => step.fired === false)
   return example.value.trace
 })
-const exampleFiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired).length : 0)
-const exampleUnfiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => !step.fired).length : 0)
+const exampleFiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired === true).length : 0)
+const exampleUnfiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired === false).length : 0)
 
 function openEdit(rule: any) {
   editing.value = { ...rule }

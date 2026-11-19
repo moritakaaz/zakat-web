@@ -2,6 +2,7 @@ const express = require('express')
 const { store } = require('../store')
 const { requireRoles } = require('../auth/auth')
 const { persistPeriod } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 
@@ -25,6 +26,7 @@ router.post('/', requireRoles('bendahara'), (req, res) => {
   store.periods.push(item)
   store.approvals.push({ periodId: id, status: 'pending', approverId: null, approverName: null, note: '', decidedAt: null })
   persistPeriod(item)
+  logAudit(req, 'Buat periode', item.periodName, item.startDate + ' sampai ' + item.endDate)
   res.status(201).json({ data: item })
 })
 
@@ -33,6 +35,7 @@ router.post('/:id/close', requireRoles('bendahara'), (req, res) => {
   if (!item) return res.status(404).json({ error: 'Period not found' })
   item.status = 'closed'
   persistPeriod(item)
+  logAudit(req, 'Tutup periode', item.periodName, '')
   res.json({ data: item })
 })
 

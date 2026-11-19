@@ -1,12 +1,25 @@
 const express = require('express')
-const { store } = require('../store')
+const { store, evaluateAll } = require('../store')
 const { requireRole } = require('../auth/auth')
 const { persistApproval } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 
 function findApproval(periodId) {
   return store.approvals.find((item) => item.periodId === periodId)
+}
+
+// Mustahik Prioritas 1 sampai 3 in this period whose home has not
+// been visited yet. Their approval is blocked until surveyed.
+function unsurveyedPriority(periodId) {
+  const { evaluations } = evaluateAll(periodId)
+  return evaluations
+    .filter((item) => ['Prioritas 1', 'Prioritas 2', 'Prioritas 3'].includes(item.result))
+    .filter((item) => {
+      const row = store.mustahik.find((entry) => entry.id === item.id)
+      return !row || row.surveyed !== true
+    })
 }
 
 router.get('/', (req, res) => {
@@ -26,12 +39,21 @@ function decide(status) {
     const periodId = Number(req.params.periodId)
     const approval = findApproval(periodId)
     if (!approval) return res.status(404).json({ error: 'Approval not found' })
+    if (status === 'approved') {
+      const pending = unsurveyedPriority(periodId)
+      if (pending.length > 0) {
+        const names = pending.slice(0, 3).map((item) => item.fullName).join(', ')
+        const more = pending.length > 3 ? ' dan ' + (pending.length - 3) + ' KK lainnya' : ''
+        return res.status(400).json({ error: 'Masih ada ' + pending.length + ' KK Prioritas 1 sampai 3 yang belum disurvei lapangan, yaitu ' + names + more + '. Tandai Sudah disurvei pada data mustahik sebelum menyetujui.' })
+      }
+    }
     approval.status = status
     approval.approverId = req.user.id
     approval.approverName = req.user.name
     approval.note = String((req.body || {}).note || '')
     approval.decidedAt = new Date().toISOString()
     persistApproval(approval)
+    logAudit(req, status === 'approved' ? 'Setujui hasil' : 'Tolak hasil', 'Periode ' + periodId, approval.note)
     res.json({ data: approval })
   }
 }

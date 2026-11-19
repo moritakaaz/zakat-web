@@ -20,12 +20,23 @@ function perCapita(mustahik) {
   return Math.floor(mustahik.monthlyIncome / mustahik.dependents)
 }
 
+// Status khusus is stored as a comma separated list of fixed options.
+// Match one whole token, never a substring, so "Bukan Janda" does not
+// count as Janda and "Janda Tapi Kaya" does not count either.
+function statusTokens(mustahik) {
+  return String(mustahik.specialStatus || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean)
+}
+
 function hasStatus(mustahik, keyword) {
-  return (mustahik.specialStatus || '').includes(keyword)
+  return statusTokens(mustahik).includes(String(keyword).toLowerCase())
 }
 
 function isTeacher(mustahik) {
-  return (mustahik.occupation || '').includes('Guru Honorer TPQ')
+  return String(mustahik.occupation || '').trim().toLowerCase() === 'guru honorer tpq'
+}
+
+function normalizeNik(value) {
+  return String(value || '').replace(/[\s-]/g, '')
 }
 
 function findRule(rules, code) {
@@ -57,7 +68,10 @@ function evaluateMustahik(mustahik, knownNiks, rules) {
   let result = null
   let fired = []
 
-  function check(code, firedNow, note) {
+  // The stored note always states the actual fact, so an unfired rule
+  // never reads as if its condition were true.
+  function check(code, firedNow, firedNote, unfiredNote) {
+    const note = firedNow ? firedNote : unfiredNote
     trace.push({ code, fired: firedNow, note })
     if (firedNow) {
       fired.push(code)
@@ -80,71 +94,75 @@ function evaluateMustahik(mustahik, knownNiks, rules) {
   }
 
   // R10 guard, document first.
-  if (active(config, 'R10') && check('R10', mustahik.documentStatus !== 'Lengkap', 'Dokumen belum lengkap')) {
+  if (active(config, 'R10') && check('R10', mustahik.documentStatus !== 'Lengkap', 'Dokumen belum lengkap', 'Dokumen lengkap')) {
     return finish('Pending Verifikasi')
   }
 
   // R11 guard, duplicate check.
-  const duplicate = Array.isArray(knownNiks) && knownNiks.filter((n) => n === mustahik.nik).length > 1
-  if (active(config, 'R11') && check('R11', duplicate, 'NIK atau nomor KK tercatat ganda')) {
+  const nik = normalizeNik(mustahik.nik)
+  const duplicate = nik !== '' && Array.isArray(knownNiks) && knownNiks.filter((n) => normalizeNik(n) === nik).length > 1
+  if (active(config, 'R11') && check('R11', duplicate, 'NIK tercatat ganda pada periode ini', 'NIK tidak ganda')) {
     return finish('Duplikat')
   }
 
   // R09 upper threshold.
   const upper = limit(config, 'R09', 'incomeLimit')
-  const specialCase = dependents >= 6
-  if (active(config, 'R09') && check('R09', upper !== undefined && income > upper && !specialCase, 'Pendapatan di atas ambang Warakas')) {
+  if (active(config, 'R09') && check('R09', upper !== undefined && income > upper, 'Pendapatan di atas ambang Warakas', 'Pendapatan ' + moneyText(income))) {
     return finish('Tidak Layak')
   }
 
-  // R01a, R01b, R01c income bands set the base priority.
+  // R01a, R01b, R01c income bands. Every band is checked so the trace
+  // shows all three, and the first matching band sets the base priority.
   const lowLimit = limit(config, 'R01a', 'incomeLimit')
   const midMin = limit(config, 'R01b', 'incomeMin')
   const midLimit = limit(config, 'R01b', 'incomeLimit')
   const highMin = limit(config, 'R01c', 'incomeMin')
   const highLimit = limit(config, 'R01c', 'incomeLimit')
-  if (active(config, 'R01a') && check('R01a', lowLimit !== undefined && income < lowLimit, lowLimit !== undefined ? 'Pendapatan kurang dari ' + moneyText(lowLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 1'
-  } else if (active(config, 'R01b') && check('R01b', midMin !== undefined && midLimit !== undefined && income >= midMin && income <= midLimit, midMin !== undefined && midLimit !== undefined ? 'Pendapatan ' + moneyText(midMin) + ' sampai ' + moneyText(midLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 2'
-  } else if (active(config, 'R01c') && check('R01c', highMin !== undefined && highLimit !== undefined && income >= highMin && income <= highLimit, highMin !== undefined && highLimit !== undefined ? 'Pendapatan ' + moneyText(highMin) + ' sampai ' + moneyText(highLimit) : 'Ambang aturan tidak tersedia')) {
-    result = 'Prioritas 3'
-  }
+  const bandA = active(config, 'R01a') && check('R01a', lowLimit !== undefined && income < lowLimit, lowLimit !== undefined ? 'Pendapatan kurang dari ' + moneyText(lowLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  const bandB = active(config, 'R01b') && check('R01b', midMin !== undefined && midLimit !== undefined && income >= midMin && income <= midLimit, midMin !== undefined && midLimit !== undefined ? 'Pendapatan ' + moneyText(midMin) + ' sampai ' + moneyText(midLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  const bandC = active(config, 'R01c') && check('R01c', highMin !== undefined && highLimit !== undefined && income >= highMin && income <= highLimit, highMin !== undefined && highLimit !== undefined ? 'Pendapatan ' + moneyText(highMin) + ' sampai ' + moneyText(highLimit) : 'Ambang aturan tidak tersedia', 'Pendapatan ' + moneyText(income))
+  if (bandA) result = 'Prioritas 1'
+  else if (bandB) result = 'Prioritas 2'
+  else if (bandC) result = 'Prioritas 3'
 
   // R02 per capita upgrade.
   const capitaLimit = limit(config, 'R02', 'perCapitaLimit')
-  if (active(config, 'R02') && check('R02', capitaLimit !== undefined && capita <= capitaLimit, 'Pendapatan per kapita ' + moneyText(capita))) {
+  if (active(config, 'R02') && check('R02', capitaLimit !== undefined && capita <= capitaLimit, 'Pendapatan per kapita ' + moneyText(capita), 'Pendapatan per kapita ' + moneyText(capita) + ', di atas batas ' + (capitaLimit !== undefined ? moneyText(capitaLimit) : '-'))) {
     if (result === 'Prioritas 2' || result === 'Prioritas 3') result = 'Prioritas 1'
   }
 
   // R03 heavy dependents confirm.
   const dependentsMin = limit(config, 'R03', 'dependentsMin')
   const heavyLimit = limit(config, 'R03', 'incomeLimit')
-  if (active(config, 'R03')) check('R03', dependentsMin !== undefined && heavyLimit !== undefined && dependents >= dependentsMin && income <= heavyLimit, 'Tanggungan berat')
+  if (active(config, 'R03')) check('R03', dependentsMin !== undefined && heavyLimit !== undefined && dependents >= dependentsMin && income <= heavyLimit, 'Tanggungan berat', 'Tanggungan ' + dependents + ' jiwa')
 
   // R04 teacher rule raises to Prioritas 1.
   const honorMin = limit(config, 'R04', 'honorMin')
   const honorMax = limit(config, 'R04', 'honorMax')
-  if (active(config, 'R04') && check('R04', honorMin !== undefined && honorMax !== undefined && isTeacher(mustahik) && income >= honorMin && income <= honorMax, 'Guru honorer TPQ')) {
+  if (active(config, 'R04') && check('R04', honorMin !== undefined && honorMax !== undefined && isTeacher(mustahik) && income >= honorMin && income <= honorMax, 'Guru honorer TPQ', 'Pekerjaan ' + (mustahik.occupation || '-'))) {
     result = 'Prioritas 1'
   }
 
   // R05 wali santri confirm.
   const waliLimit = limit(config, 'R05', 'incomeLimit')
-  if (active(config, 'R05')) check('R05', waliLimit !== undefined && hasStatus(mustahik, 'Wali Santri') && income < waliLimit, 'Wali santri')
+  if (active(config, 'R05')) check('R05', waliLimit !== undefined && hasStatus(mustahik, 'Wali Santri') && income < waliLimit, 'Wali santri', 'Status khusus ' + (mustahik.specialStatus || '-'))
 
   // R06 vulnerable group confirm.
   const vulnerable = hasStatus(mustahik, 'Janda') || hasStatus(mustahik, 'Lansia') || hasStatus(mustahik, 'Yatim')
   const vulnerableLimit = limit(config, 'R06', 'incomeLimit')
-  if (active(config, 'R06')) check('R06', vulnerableLimit !== undefined && vulnerable && income < vulnerableLimit, 'Kelompok rentan')
+  if (active(config, 'R06')) check('R06', vulnerableLimit !== undefined && vulnerable && income < vulnerableLimit, 'Kelompok rentan', 'Status khusus ' + (mustahik.specialStatus || '-'))
 
   // R07 house tie breaker.
-  if (active(config, 'R07')) check('R07', mustahik.houseCondition === 'Kontrak' || mustahik.houseCondition === 'Menumpang', 'Rumah kontrak atau menumpang')
+  if (active(config, 'R07')) check('R07', mustahik.houseCondition === 'Kontrak' || mustahik.houseCondition === 'Menumpang', 'Rumah kontrak atau menumpang', 'Rumah ' + (mustahik.houseCondition || '-'))
 
   // R08 school burden tie breaker.
   const schoolMin = limit(config, 'R08', 'schoolMin')
   const schoolLimit = limit(config, 'R08', 'incomeLimit')
-  if (active(config, 'R08')) check('R08', schoolMin !== undefined && schoolLimit !== undefined && (mustahik.schoolChildren || 0) >= schoolMin && income <= schoolLimit, 'Beban pendidikan tinggi')
+  if (active(config, 'R08')) check('R08', schoolMin !== undefined && schoolLimit !== undefined && (mustahik.schoolChildren || 0) >= schoolMin && income <= schoolLimit, 'Beban pendidikan tinggi', 'Anak sekolah ' + (mustahik.schoolChildren || 0) + ' orang')
+
+  // R12 is a ranking rule, not a per household condition. It is listed
+  // in the trace as information with no fired state.
+  if (active(config, 'R12')) trace.push({ code: 'R12', fired: null, note: 'Penyaluran diurutkan Prioritas 1, lalu 2, lalu 3 bila dana kurang' })
 
   if (!result) result = 'Tidak Layak'
   return finish(result)

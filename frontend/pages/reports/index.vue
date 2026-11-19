@@ -61,7 +61,7 @@
             <SortButton label="Status" column="status" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
           </template>
           <template #status-cell="{ row }">
-            <UBadge :color="row.original.status === 'active' ? 'success' : 'neutral'" variant="soft">{{ row.original.status }}</UBadge>
+            <UBadge :color="row.original.status === 'active' ? 'success' : 'neutral'" variant="soft">{{ row.original.status === 'active' ? 'Aktif' : 'Tutup' }}</UBadge>
           </template>
           <template #actions-cell="{ row }">
             <div class="flex gap-2">
@@ -71,6 +71,30 @@
           </template>
         </UTable>
       </div>
+    </UCard>
+
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+          <UIcon name="i-lucide-history" class="size-4.5 text-emerald-700" />
+          Riwayat perubahan
+        </h2>
+      </template>
+      <p class="text-sm text-slate-500">Siapa mengubah apa dan kapan. Menampilkan 20 perubahan terakhir.</p>
+      <div class="overflow-x-auto mt-3">
+        <UTable :data="auditPage" :columns="auditColumns">
+          <template #createdAt-cell="{ row }">
+            <span class="tnum whitespace-nowrap">{{ formatDateTime(row.original.createdAt) }}</span>
+          </template>
+          <template #actorName-cell="{ row }">
+            <div>
+              <span class="font-medium">{{ row.original.actorName || '-' }}</span>
+              <span class="block text-xs text-slate-500">{{ row.original.actorRole || '' }}</span>
+            </div>
+          </template>
+        </UTable>
+      </div>
+      <p v-if="auditLog.length === 0" class="text-sm text-slate-500 mt-3">Belum ada perubahan tercatat.</p>
     </UCard>
 
     <UModal v-model:open="showCreate" title="Buat periode baru">
@@ -102,7 +126,7 @@
 
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
-import { formatMoney, formatKg } from '~/utils/format'
+import { formatMoney, formatKg, formatDateTime } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
 const { receipts, distributions, summary, loadError, loadAll, loadDashboard } = useZakatData()
@@ -135,6 +159,26 @@ const periodColumns = [
 const showCreate = ref(false)
 const periodError = ref('')
 const newPeriod = ref({ periodName: '', startDate: '', endDate: '' })
+const auditLog = ref<any[]>([])
+const auditPage = computed(() => auditLog.value.slice(0, 20))
+const auditColumns = [
+  { accessorKey: 'createdAt', header: 'Waktu' },
+  { accessorKey: 'actorName', header: 'Pengguna' },
+  { accessorKey: 'action', header: 'Aksi' },
+  { accessorKey: 'target', header: 'Target' },
+  { accessorKey: 'detail', header: 'Detail' }
+]
+
+async function loadAuditLog() {
+  try {
+    const res = await authFetch('/audit-log')
+    if (!res.ok) return
+    const body = await res.json()
+    auditLog.value = Array.isArray(body.data) ? body.data : []
+  } catch (error) {
+    auditLog.value = []
+  }
+}
 
 async function createPeriod() {
   periodError.value = ''
@@ -168,6 +212,7 @@ function printReport() {
 
 onMounted(async () => {
   await loadAll(authFetch)
+  await loadAuditLog()
 })
 
 watch(selectedPeriodId, () => loadDashboard(authFetch))

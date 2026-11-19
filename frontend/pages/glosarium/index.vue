@@ -90,7 +90,7 @@ const statuses = [
   { name: 'Prioritas 2', meaning: 'Kelompok kedua setelah Prioritas 1.' },
   { name: 'Prioritas 3', meaning: 'Kelompok ketiga setelah Prioritas 1 dan 2.' },
   { name: 'Pending Verifikasi', meaning: 'Mustahik belum bisa diputuskan karena dokumen belum lengkap.' },
-  { name: 'Duplikat', meaning: 'NIK atau nomor KK yang sama sudah tercatat pada periode yang sama.' },
+  { name: 'Duplikat', meaning: 'NIK yang sama sudah tercatat pada periode yang sama.' },
   { name: 'Tidak Layak', meaning: 'Mustahik tidak memenuhi syarat penerima pada periode ini.' }
 ]
 

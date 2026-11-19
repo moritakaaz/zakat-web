@@ -15,6 +15,7 @@ function toMustahik(row) {
     specialStatus: row.special_status,
     asnaf: row.asnaf,
     documentStatus: row.document_status,
+    surveyed: row.surveyed === 1 || row.surveyed === true,
     periodId: row.period_id,
     expectedResult: row.expected_result || null
   }
@@ -42,6 +43,14 @@ async function initFromDatabase() {
     const [approvals] = await pool.query('SELECT period_id, status, approver_id, approver_name, note, decided_at FROM approvals ORDER BY period_id')
     const [muzakki] = await pool.query('SELECT id, full_name, address, zakat_type, period_id FROM muzakki ORDER BY id')
     const [rules] = await pool.query('SELECT rule_code, condition_text, result_text, execution_order, is_active, thresholds, source FROM rules ORDER BY execution_order, rule_code')
+    let auditLog = []
+    try {
+      const [rows] = await pool.query('SELECT id, actor_name, actor_role, action, target, detail, created_at FROM audit_log ORDER BY id DESC LIMIT 500')
+      auditLog = rows.map((row) => ({ id: row.id, actorName: row.actor_name, actorRole: row.actor_role, action: row.action, target: row.target, detail: row.detail || '', createdAt: row.created_at ? new Date(row.created_at).toISOString() : null }))
+    } catch (error) {
+      auditLog = []
+    }
+    store.auditLog = auditLog
     store.users = users.map((row) => ({ id: row.id, name: row.name, email: row.email, role: row.role, passwordHash: row.password }))
     store.periods = periods.map((row) => ({ id: row.id, periodName: row.period_name, startDate: row.start_date, endDate: row.end_date, status: row.status }))
     store.mustahik = mustahik.map(toMustahik)

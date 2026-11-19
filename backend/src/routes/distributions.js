@@ -2,6 +2,7 @@ const express = require('express')
 const { store } = require('../store')
 const { requireRoles } = require('../auth/auth')
 const { persistDistribution } = require('../db/persist')
+const { logAudit } = require('../db/audit')
 
 const router = express.Router()
 
@@ -44,6 +45,7 @@ router.post('/', requireRoles('bendahara'), (req, res) => {
   const item = { ...body, periodId, id: 'DS' + String(next).padStart(2, '0'), mustahikId: body.mustahikId || null, groupName: body.groupName || '', name: body.name || body.groupName || (mustahik && mustahik.fullName) || '', zakatType: body.zakatType || '', priority: body.priority || '', form: body.form || 'Uang' }
   store.distributions.push(item)
   persistDistribution(item)
+  logAudit(req, 'Catat penyaluran', item.id + ' ' + (item.name || ''), (item.zakatType || '') + ' ' + (item.form || '') + ' ' + (item.amountMoney ? 'Rp ' + item.amountMoney : '') + (item.quantityKg ? item.quantityKg + ' kg' : ''))
   res.status(201).json({ data: item })
 })
 

@@ -51,7 +51,7 @@ async function submit(form: any) {
     return
   }
   const cleanNik = String(form.nik).replace(/\D/g, '')
-  const duplicate = mustahik.value.some((row: any) => row.nik === cleanNik && Number(row.periodId || 1) === selectedPeriodId.value)
+  const duplicate = mustahik.value.some((row: any) => String(row.nik).replace(/\D/g, '') === cleanNik && Number(row.periodId || 1) === selectedPeriodId.value)
   if (duplicate) {
     duplicateWarning.value = 'NIK ini sudah tercatat pada periode yang sama. Data tidak disimpan.'
     error.value = 'NIK sudah tercatat pada periode yang sama.'
