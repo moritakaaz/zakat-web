@@ -12,7 +12,8 @@ router.get('/', (req, res) => {
 })
 
 router.post('/', requireRoles('bendahara', 'sekretaris'), (req, res) => {
-  const item = { periodId: 1, id: 'RC' + String(store.receipts.length + 1).padStart(2, '0'), ...req.body, periodId: Number((req.body || {}).periodId || 1) }
+  const nextNumber = store.receipts.reduce((max, row) => Math.max(max, Number(String(row.id).replace(/\D/g, '')) || 0), 0) + 1
+  const item = { periodId: 1, ...req.body, id: 'RC' + String(nextNumber).padStart(2, '0'), periodId: Number((req.body || {}).periodId || 1) }
   store.receipts.push(item)
   persistReceipt(item)
   res.status(201).json({ data: item })

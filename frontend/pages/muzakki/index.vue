@@ -93,9 +93,13 @@
       </template>
     </UModal>
 
+    <UAlert v-if="receiptSaved" color="success" variant="soft" :title="receiptSaved" icon="i-lucide-circle-check" class="mt-4" />
     <UCard class="shadow-sm ring-slate-200 mt-4">
       <template #header>
-        <h2 class="font-semibold text-slate-900">Penerimaan dari muzakki</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold text-slate-900">Penerimaan dari muzakki</h2>
+          <UButton v-if="canInput" size="sm" icon="i-lucide-receipt" @click="openReceiptCreate">Catat Penerimaan</UButton>
+        </div>
       </template>
       <div class="overflow-x-auto">
         <UTable :data="receiptsPage" :columns="receiptColumns">
@@ -129,6 +133,42 @@
         <UPagination v-model:page="receiptsPageNo" :total="receipts.length" :items-per-page="10" />
       </div>
     </UCard>
+
+    <UModal v-model:open="showReceiptForm" title="Catat penerimaan">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="Muzakki" name="muzakkiId">
+            <USelect v-model="receiptForm.muzakkiId" :items="muzakkiOptions" value-key="id" label-key="fullName" placeholder="Pilih muzakki" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Jenis zakat" name="zakatType">
+              <USelect v-model="receiptForm.zakatType" :items="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
+            </UFormField>
+            <UFormField label="Bentuk" name="form">
+              <USelect v-model="receiptForm.form" :items="['Uang', 'Beras']" class="w-full" />
+            </UFormField>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField v-if="receiptForm.form === 'Beras'" label="Beras (kg)" name="quantityKg">
+              <UInputNumber v-model="receiptForm.quantityKg" :min="0" class="w-full" />
+            </UFormField>
+            <UFormField v-if="receiptForm.form === 'Uang'" label="Nilai uang (Rp)" name="amountMoney">
+              <UInputNumber v-model="receiptForm.amountMoney" :min="0" class="w-full" />
+            </UFormField>
+            <UFormField label="Tanggal" name="date">
+              <UInput v-model="receiptForm.date" type="date" class="w-full" />
+            </UFormField>
+          </div>
+          <p v-if="receiptError" class="text-sm text-red-600">{{ receiptError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton @click="saveReceipt">Simpan Penerimaan</UButton>
+          <UButton color="neutral" variant="soft" @click="showReceiptForm = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
 
     <UCard class="shadow-sm ring-slate-200 mt-4">
       <template #header>
@@ -181,6 +221,11 @@ const muzakki = ref<any[]>([])
 const muzakkiError = ref('')
 const showForm = ref(false)
 const showDelete = ref(false)
+const showReceiptForm = ref(false)
+const receiptError = ref('')
+const receiptSaved = ref('')
+const receiptForm = ref({ muzakkiId: '', zakatType: 'Infaq', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) })
+const muzakkiOptions = computed(() => muzakki.value.map((row) => ({ id: row.id, fullName: row.fullName })))
 const toDelete = ref<any>(null)
 const editingId = ref('')
 const form = ref({ fullName: '', address: '', zakatType: 'Infaq', amount: 0 })
@@ -266,6 +311,56 @@ async function saveMuzakki() {
   }
   showForm.value = false
   await loadMuzakki()
+}
+
+function openReceiptCreate() {
+  receiptForm.value = { muzakkiId: '', zakatType: 'Infaq', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) }
+  receiptError.value = ''
+  showReceiptForm.value = true
+}
+
+async function saveReceipt() {
+  receiptError.value = ''
+  const selected = muzakki.value.find((row) => row.id === receiptForm.value.muzakkiId)
+  if (!selected) {
+    receiptError.value = 'Pilih muzakki terlebih dahulu.'
+    return
+  }
+  if (!receiptForm.value.zakatType) {
+    receiptError.value = 'Pilih jenis zakat terlebih dahulu.'
+    return
+  }
+  const isRice = receiptForm.value.form === 'Beras'
+  const amount = isRice ? receiptForm.value.quantityKg : receiptForm.value.amountMoney
+  if (!amount || amount <= 0) {
+    receiptError.value = isRice ? 'Jumlah beras harus lebih dari 0 kg.' : 'Nilai uang harus lebih dari Rp 0.'
+    return
+  }
+  const body = JSON.stringify({
+    periodId: selectedPeriodId.value,
+    muzakkiId: selected.id,
+    name: selected.fullName,
+    zakatType: receiptForm.value.zakatType,
+    form: receiptForm.value.form,
+    quantityKg: isRice ? receiptForm.value.quantityKg : 0,
+    amountMoney: isRice ? 0 : receiptForm.value.amountMoney,
+    date: receiptForm.value.date
+  })
+  const res = await authFetch('/receipts', { method: 'POST', body })
+  if (!res.ok) {
+    let message = 'Gagal menyimpan penerimaan. Pastikan Anda masuk sebagai Bendahara atau Sekretaris.'
+    try {
+      const data = await res.json()
+      if (data.error) message = data.error
+    } catch (error) {
+      message = 'Gagal menyimpan penerimaan. Pastikan Anda masuk sebagai Bendahara atau Sekretaris.'
+    }
+    receiptError.value = message
+    return
+  }
+  showReceiptForm.value = false
+  receiptSaved.value = 'Penerimaan ' + receiptForm.value.zakatType + ' dari ' + selected.fullName + ' tersimpan.'
+  await loadFinance(authFetch)
 }
 
 function askDelete(item: any) {

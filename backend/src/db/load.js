@@ -45,7 +45,16 @@ async function initFromDatabase() {
     store.users = users.map((row) => ({ id: row.id, name: row.name, email: row.email, role: row.role, passwordHash: row.password }))
     store.periods = periods.map((row) => ({ id: row.id, periodName: row.period_name, startDate: row.start_date, endDate: row.end_date, status: row.status }))
     store.mustahik = mustahik.map(toMustahik)
-    store.receipts = receipts.map((row) => ({ id: 'RC' + String(row.id).padStart(2, '0'), periodId: 1, muzakkiId: row.muzakki_id, zakatType: row.zakat_type, quantityKg: row.amount_rice_kg, amountMoney: row.amount_money, date: row.received_date, recordedBy: row.recorded_by }))
+    const muzakkiNames = new Map(muzakki.map((row) => [row.id, row.full_name]))
+    store.receipts = receipts.map((row) => {
+      const quantityKg = row.amount_rice_kg
+      const amountMoney = row.amount_money
+      let form = ''
+      if (quantityKg > 0 && amountMoney > 0) form = 'Uang dan Beras'
+      else if (quantityKg > 0) form = 'Beras'
+      else if (amountMoney > 0) form = 'Uang'
+      return { id: 'RC' + String(row.id).padStart(2, '0'), periodId: 1, muzakkiId: row.muzakki_id, name: muzakkiNames.get(row.muzakki_id) || '', zakatType: row.zakat_type, form, quantityKg, amountMoney, date: row.received_date, recordedBy: row.recorded_by }
+    })
     store.distributions = distributions.map((row) => ({ id: 'DS' + String(row.id).padStart(2, '0'), periodId: 1, mustahikId: row.mustahik_id, priority: row.priority, form: row.distribution_type, quantityKg: row.amount_rice_kg, amountMoney: row.amount_money, date: row.distribution_date, recordedBy: row.recorded_by }))
     store.approvals = approvals.map((row) => ({ periodId: row.period_id, status: row.status, approverId: row.approver_id, approverName: row.approver_name, note: row.note || '', decidedAt: row.decided_at ? new Date(row.decided_at).toISOString() : null }))
     store.muzakki = muzakki.map((row) => ({ id: row.id, fullName: row.full_name, address: row.address, zakatType: row.zakat_type, amount: row.amount, periodId: row.period_id }))
