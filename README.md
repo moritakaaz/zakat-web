@@ -52,8 +52,9 @@ Lalu jalankan backend seperti biasa. Backend memakai MySQL bila database terhubu
 Bagian ini menjelaskan isi database pada tiap keadaan agar tidak ada data yang muncul tanpa jelas asalnya.
 
 - Hanya schema sql berarti database kosong. Aplikasi menampilkan 0 mustahik, 0 muzakki, 0 penerimaan, dan 0 penyaluran, serta tidak ada pengguna dan tidak ada aturan. Login belum bisa sebelum data seed dimasukkan.
-- Seed sql atau npm run seed berarti data acuan Excel masuk. Isinya 30 KK dengan Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK, ditambah 6 muzakki, 10 baris penerimaan, 14 aturan, 2 periode, dan 3 akun demo.
-- Data seed berisi 10 baris penerimaan dengan beras 130 kg dan uang Rp 7.450.000, tetapi belum berisi baris penyaluran. Karena itu penyaluran mulai dari 0 sampai dicatat lewat aplikasi.
+- Seed sql atau npm run seed berarti data acuan Excel masuk. Isinya 30 KK dengan Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK, ditambah 6 muzakki, 10 baris penerimaan, 8 baris penyaluran, 14 aturan, 2 periode, dan 3 akun demo.
+- Data seed berisi 10 baris penerimaan dengan beras 130 kg dan uang Rp 7.450.000 serta 8 baris penyaluran dengan beras 130 kg dan uang Rp 6.800.000. Sisa saldo uang acuan adalah Rp 650.000 dan sisa beras acuan adalah 0 kg.
+- Perubahan skema pada versi baru tidak diterapkan oleh schema sql pada database lama karena schema sql memakai IF NOT EXISTS. Setelah menarik versi dengan perubahan skema, hapus dulu databasenya lalu jalankan npm run seed agar tabel baru terbentuk dan data seed masuk.
 - Docker compose up pada volume baru membuat skema dan data seed otomatis. Menjalankan schema sql lagi pada database yang sudah berisi data tidak menghapus data karena schema sql memakai IF NOT EXISTS dan tidak berisi INSERT atau DELETE.
 - Untuk mulai dari kosong pada database yang sudah terisi seed, hapus dulu databasenya lalu jalankan schema sql saja. Pada MySQL manual, jalankan DROP DATABASE zakat_al_fawwaz lalu jalankan schema sql. Pada Docker, jalankan docker compose down -v untuk menghapus volume. Volume baru yang dibuat oleh up berikutnya selalu menjalankan seed otomatis, jadi untuk database kosong, hapus database hasil seed dengan DROP DATABASE lalu jalankan schema sql saja.
 
@@ -67,6 +68,19 @@ Bagian ini menjelaskan isi database pada tiap keadaan agar tidak ada data yang m
 ## Data Frontend dari API
 
 Frontend membaca semua data dari API backend dan tidak lagi memakai file data contoh di dalam folder frontend. Dashboard memakai angka dari API dashboard, daftar mustahik memakai API mustahik, penerimaan dan penyaluran memakai API receipts dan distributions, periode memakai API periods, dan aturan memakai API rules. Bila API mengembalikan data kosong, aplikasi menampilkan 0 dan bukan data contoh. Bila backend tidak berjalan, aplikasi menampilkan pesan galat dan tabel kosong. File data mustahik dan finance di folder frontend sudah dihapus.
+
+## Penyaluran per Kelompok
+
+- Delapan baris penyaluran pada data acuan dicatat per kelompok penerima, bukan per kepala keluarga, sesuai lembar Excel acuan. Kolom mustahik_id boleh kosong pada baris kelompok dan nama kelompok disimpan pada kolom group_name beserta jenis zakat pada kolom zakat_type.
+- Baris infaq untuk anak yatim dan operasional amil tercatat sebagai baris kelompok tanpa mustahik, bukan atas nama satu mustahik.
+- Halaman Muzakki dan Penerimaan menyediakan tombol Catat Penyaluran untuk Bendahara. Penyaluran baru dapat ditujukan kepada satu mustahik atau kepada satu kelompok penerima. Mustahik yang dipilih harus berstatus Prioritas 1, Prioritas 2, atau Prioritas 3 menurut hasil proses Rule-Based.
+- API menolak penyaluran bila hasil prioritas periode belum disetujui Kepala TPQ atau bila jumlahnya melebihi sisa saldo uang dan sisa beras periode tersebut.
+
+## Total Penerimaan per Muzakki
+
+- Kolom jumlah pada form Tambah Muzakki sudah dihapus karena jumlah itu hanya data profil dan tidak pernah masuk ke uang masuk. Uang dan beras hanya tercatat lewat Catat Penerimaan.
+- Kolom Jumlah pada tabel muzakki menampilkan total penerimaan yang tercatat untuk muzakki tersebut pada periode berjalan. Total dihitung dari tabel penerimaan dan diperbarui setiap ada penerimaan baru.
+- Enam dari sepuluh baris penerimaan seed sudah terhubung ke muzakkinya berdasarkan jenis zakat dan jumlah yang sama persis. Empat baris sisanya tetap tanpa muzakki, yaitu uang fitrah Rp 600.000 dan beras fitrah 130 kg, karena pemberinya tidak tercatat pada tabel muzakki.
 
 ## Cara Menjalankan Frontend
 

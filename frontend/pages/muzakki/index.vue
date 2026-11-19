@@ -36,11 +36,11 @@
           <template #zakatType-header>
             <SortButton label="Jenis Zakat" column="zakatType" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
           </template>
-          <template #amount-header>
-            <SortButton label="Jumlah" column="amount" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          <template #totalMoney-header>
+            <SortButton label="Jumlah" column="totalMoney" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
           </template>
-          <template #amount-cell="{ row }">
-            <span class="tnum">{{ formatMoney(row.original.amount) }}</span>
+          <template #totalMoney-cell="{ row }">
+            <span class="tnum">{{ totalText(row.original) }}</span>
           </template>
           <template #actions-cell="{ row }">
             <div v-if="canInput" class="flex gap-1">
@@ -74,14 +74,10 @@
           <UFormField label="Alamat" name="address">
             <UInput v-model="form.address" class="w-full" />
           </UFormField>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UFormField label="Jenis zakat" name="zakatType">
-              <USelect v-model="form.zakatType" :items="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
-            </UFormField>
-            <UFormField label="Jumlah (Rp)" name="amount">
-              <UInputNumber v-model="form.amount" :min="0" class="w-full" />
-            </UFormField>
-          </div>
+          <UFormField label="Jenis zakat" name="zakatType">
+            <USelect v-model="form.zakatType" :items="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
+          </UFormField>
+          <p class="text-sm text-slate-500">Jumlah yang diterima dicatat lewat Catat Penerimaan dan tampil otomatis pada kolom Jumlah di tabel.</p>
           <p v-if="muzakkiError" class="text-sm text-red-600">{{ muzakkiError }}</p>
         </div>
       </template>
@@ -170,9 +166,13 @@
       </template>
     </UModal>
 
+    <UAlert v-if="distributionSaved" color="success" variant="soft" :title="distributionSaved" icon="i-lucide-circle-check" class="mt-4" />
     <UCard class="shadow-sm ring-slate-200 mt-4">
       <template #header>
-        <h2 class="font-semibold text-slate-900">Penyaluran kepada mustahik</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold text-slate-900">Penyaluran kepada mustahik</h2>
+          <UButton v-if="isBendahara" size="sm" icon="i-lucide-hand-coins" @click="openDistributionCreate">Catat Penyaluran</UButton>
+        </div>
       </template>
       <div class="overflow-x-auto">
         <UTable :data="sortedDistributions" :columns="distributionColumns">
@@ -200,16 +200,57 @@
         </UTable>
       </div>
     </UCard>
+
+    <UModal v-model:open="showDistributionForm" title="Catat penyaluran">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="Mustahik" name="mustahikId">
+            <USelect v-model="distributionForm.mustahikId" :items="mustahikOptions" value-key="id" label-key="fullName" placeholder="Pilih mustahik" class="w-full" />
+          </UFormField>
+          <UFormField v-if="!distributionForm.mustahikId" label="Kelompok Penerima" name="groupName">
+            <UInput v-model="distributionForm.groupName" placeholder="Contoh: Prioritas 1 (15 KK)" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Jenis zakat" name="zakatType">
+              <USelect v-model="distributionForm.zakatType" :items="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
+            </UFormField>
+            <UFormField label="Bentuk" name="form">
+              <USelect v-model="distributionForm.form" :items="['Uang', 'Beras']" class="w-full" />
+            </UFormField>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField v-if="distributionForm.form === 'Beras'" label="Beras (kg)" name="quantityKg">
+              <UInputNumber v-model="distributionForm.quantityKg" :min="0" class="w-full" />
+            </UFormField>
+            <UFormField v-if="distributionForm.form === 'Uang'" label="Nilai uang (Rp)" name="amountMoney">
+              <UInputNumber v-model="distributionForm.amountMoney" :min="0" class="w-full" />
+            </UFormField>
+            <UFormField label="Tanggal" name="date">
+              <UInput v-model="distributionForm.date" type="date" class="w-full" />
+            </UFormField>
+          </div>
+          <p class="text-sm text-slate-500">Penyaluran hanya dapat dicatat setelah Kepala TPQ menyetujui hasil prioritas periode ini dan jumlahnya tidak melebihi sisa saldo.</p>
+          <p v-if="distributionError" class="text-sm text-red-600">{{ distributionError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton @click="saveDistribution">Simpan Penyaluran</UButton>
+          <UButton color="neutral" variant="soft" @click="showDistributionForm = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
+import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
-const { receipts, distributions, loadError, loadFinance } = useZakatData()
-const { authFetch, canInput, canDelete } = useSession()
+const { receipts, distributions, periodMustahik, evaluations, loadError, loadFinance, loadMustahik } = useZakatData()
+const { authFetch, canInput, canDelete, isBendahara } = useSession()
+const { loadRules } = useRules()
 const { periods, selectedPeriodId, loadPeriods } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 const moneyIn = computed(() => receipts.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
@@ -228,14 +269,24 @@ const receiptForm = ref({ muzakkiId: '', zakatType: 'Infaq', form: 'Uang', quant
 const muzakkiOptions = computed(() => muzakki.value.map((row) => ({ id: row.id, fullName: row.fullName })))
 const toDelete = ref<any>(null)
 const editingId = ref('')
-const form = ref({ fullName: '', address: '', zakatType: 'Infaq', amount: 0 })
+const form = ref({ fullName: '', address: '', zakatType: 'Infaq' })
+const showDistributionForm = ref(false)
+const distributionError = ref('')
+const distributionSaved = ref('')
+const distributionForm = ref({ mustahikId: '', groupName: '', zakatType: 'Zakat Fitrah', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) })
 const muzakkiPageNo = ref(1)
 const receiptsPageNo = ref(1)
 const { sortKey: muzakkiSortKey, sortDirection: muzakkiSortDirection, toggleSort: toggleMuzakkiSort, sortRows: sortMuzakkiRows } = useTableSort()
 const { sortKey: receiptSortKey, sortDirection: receiptSortDirection, toggleSort: toggleReceiptSort, sortRows: sortReceiptRows } = useTableSort()
 const { sortKey: distributionSortKey, sortDirection: distributionSortDirection, toggleSort: toggleDistributionSort, sortRows: sortDistributionRows } = useTableSort()
 const plainValue = (row: any, key: string) => row[key]
-const muzakkiPage = computed(() => sortMuzakkiRows(muzakki.value, plainValue).slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
+const muzakkiWithTotals = computed(() => muzakki.value.map((row) => {
+  const total = receipts.value
+    .filter((item) => item.muzakkiId === row.id && Number(item.periodId || 1) === selectedPeriodId.value)
+    .reduce((sum, item) => ({ money: sum.money + (item.amountMoney || 0), rice: sum.rice + (item.quantityKg || 0) }), { money: 0, rice: 0 })
+  return { ...row, totalMoney: total.money, totalRice: total.rice }
+}))
+const muzakkiPage = computed(() => sortMuzakkiRows(muzakkiWithTotals.value, plainValue).slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
 const receiptsPage = computed(() => sortReceiptRows(receipts.value, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
 const sortedDistributions = computed(() => sortDistributionRows(distributions.value, plainValue))
 
@@ -248,11 +299,21 @@ const muzakkiColumns = computed(() => {
     { accessorKey: 'fullName', header: 'Nama' },
     { accessorKey: 'address', header: 'Alamat' },
     { accessorKey: 'zakatType', header: 'Jenis Zakat' },
-    { accessorKey: 'amount', header: 'Jumlah' }
+    { accessorKey: 'totalMoney', header: 'Jumlah' }
   ]
   if (canInput.value) base.push({ id: 'actions', header: 'Aksi' } as any)
   return base
 })
+
+function totalText(row: any) {
+  const money = row.totalMoney || 0
+  const rice = row.totalRice || 0
+  if (money > 0 && rice > 0) return formatMoney(money) + ' + ' + rice + ' kg'
+  if (rice > 0) return rice + ' kg'
+  return formatMoney(money)
+}
+
+const mustahikOptions = computed(() => [{ id: '', fullName: 'Kelompok penerima (tanpa mustahik)' }, ...periodMustahik.value.map((row) => ({ id: row.id, fullName: row.fullName }))])
 const receiptColumns = [
   { accessorKey: 'date', header: 'Tanggal' },
   { accessorKey: 'zakatType', header: 'Jenis Zakat' },
@@ -283,14 +344,14 @@ async function loadMuzakki() {
 
 function openCreate() {
   editingId.value = ''
-  form.value = { fullName: '', address: '', zakatType: 'Infaq', amount: 0 }
+  form.value = { fullName: '', address: '', zakatType: 'Infaq' }
   muzakkiError.value = ''
   showForm.value = true
 }
 
 function openEdit(item: any) {
   editingId.value = item.id
-  form.value = { fullName: item.fullName, address: item.address, zakatType: item.zakatType, amount: item.amount }
+  form.value = { fullName: item.fullName, address: item.address, zakatType: item.zakatType }
   muzakkiError.value = ''
   showForm.value = true
 }
@@ -363,6 +424,68 @@ async function saveReceipt() {
   await loadFinance(authFetch)
 }
 
+function openDistributionCreate() {
+  distributionForm.value = { mustahikId: '', groupName: '', zakatType: 'Zakat Fitrah', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) }
+  distributionError.value = ''
+  showDistributionForm.value = true
+}
+
+async function saveDistribution() {
+  distributionError.value = ''
+  const selected = periodMustahik.value.find((row) => row.id === distributionForm.value.mustahikId)
+  const groupName = distributionForm.value.groupName.trim()
+  if (!selected && !groupName) {
+    distributionError.value = 'Pilih mustahik atau isi kelompok penerima terlebih dahulu.'
+    return
+  }
+  let priority = ''
+  if (selected) {
+    const evaluation = evaluations.value.find((row) => row.id === selected.id)
+    priority = evaluation ? evaluation.result : ''
+    if (priority && priority !== 'Prioritas 1' && priority !== 'Prioritas 2' && priority !== 'Prioritas 3') {
+      distributionError.value = selected.fullName + ' berstatus ' + priority + ', bukan prioritas penyaluran.'
+      return
+    }
+  }
+  if (!distributionForm.value.zakatType) {
+    distributionError.value = 'Pilih jenis zakat terlebih dahulu.'
+    return
+  }
+  const isRice = distributionForm.value.form === 'Beras'
+  const amount = isRice ? distributionForm.value.quantityKg : distributionForm.value.amountMoney
+  if (!amount || amount <= 0) {
+    distributionError.value = isRice ? 'Jumlah beras harus lebih dari 0 kg.' : 'Nilai uang harus lebih dari Rp 0.'
+    return
+  }
+  const body = JSON.stringify({
+    periodId: selectedPeriodId.value,
+    mustahikId: selected ? selected.id : null,
+    groupName: selected ? '' : groupName,
+    name: selected ? selected.fullName : groupName,
+    zakatType: distributionForm.value.zakatType,
+    priority,
+    form: distributionForm.value.form,
+    quantityKg: isRice ? distributionForm.value.quantityKg : 0,
+    amountMoney: isRice ? 0 : distributionForm.value.amountMoney,
+    date: distributionForm.value.date
+  })
+  const res = await authFetch('/distributions', { method: 'POST', body })
+  if (!res.ok) {
+    let message = 'Gagal menyimpan penyaluran. Pastikan Anda masuk sebagai Bendahara dan periode sudah disetujui Kepala TPQ.'
+    try {
+      const data = await res.json()
+      if (data.error) message = data.error
+    } catch (error) {
+      message = 'Gagal menyimpan penyaluran. Pastikan Anda masuk sebagai Bendahara dan periode sudah disetujui Kepala TPQ.'
+    }
+    distributionError.value = message
+    return
+  }
+  showDistributionForm.value = false
+  distributionSaved.value = 'Penyaluran ' + distributionForm.value.zakatType + ' kepada ' + (selected ? selected.fullName : groupName) + ' tersimpan.'
+  await loadFinance(authFetch)
+}
+
 function askDelete(item: any) {
   toDelete.value = item
   muzakkiError.value = ''
@@ -387,5 +510,7 @@ onMounted(async () => {
   await loadFinance(authFetch)
   await loadPeriods(authFetch)
   await loadMuzakki()
+  await loadMustahik(authFetch)
+  await loadRules(authFetch)
 })
 </script>

@@ -49,12 +49,22 @@ INSERT INTO zakat_receipts (muzakki_id, zakat_type, amount_rice_kg, amount_money
 (NULL, 'Zakat Fitrah', 45, 0, '2025-03-22', 'Bendahara'),
 (NULL, 'Zakat Fitrah', 35, 0, '2025-03-24', 'Bendahara'),
 (NULL, 'Zakat Fitrah', 0, 600000, '2025-03-25', 'Bendahara'),
-(NULL, 'Zakat Fitrah', 0, 250000, '2025-03-26', 'Bendahara'),
-(NULL, 'Zakat Mal', 0, 2500000, '2025-03-21', 'Bendahara'),
-(NULL, 'Zakat Mal', 0, 1500000, '2025-03-24', 'Bendahara'),
-(NULL, 'Zakat Mal', 0, 1000000, '2025-03-27', 'Bendahara'),
-(NULL, 'Infaq', 0, 850000, '2025-03-15', 'Bendahara'),
-(NULL, 'Infaq', 0, 750000, '2025-03-28', 'Bendahara');
+('MZ04', 'Zakat Fitrah', 0, 250000, '2025-03-26', 'Bendahara'),
+('MZ01', 'Zakat Mal', 0, 2500000, '2025-03-21', 'Bendahara'),
+('MZ02', 'Zakat Mal', 0, 1500000, '2025-03-24', 'Bendahara'),
+('MZ03', 'Zakat Mal', 0, 1000000, '2025-03-27', 'Bendahara'),
+('MZ06', 'Infaq', 0, 850000, '2025-03-15', 'Bendahara'),
+('MZ05', 'Infaq', 0, 750000, '2025-03-28', 'Bendahara');
+
+INSERT INTO zakat_distributions (mustahik_id, priority, distribution_type, zakat_type, group_name, amount_rice_kg, amount_money, distribution_date, recorded_by) VALUES
+(NULL, 'Prioritas 1', 'Beras', 'Zakat Fitrah', 'Prioritas 1 (15 KK)', 75, 0, '2025-03-28', 'Bendahara'),
+(NULL, 'Prioritas 2', 'Beras', 'Zakat Fitrah', 'Prioritas 2 (6 KK)', 30, 0, '2025-03-28', 'Bendahara'),
+(NULL, 'Prioritas 3', 'Beras', 'Zakat Fitrah', 'Prioritas 3 (5 KK)', 25, 0, '2025-03-29', 'Bendahara'),
+(NULL, '', 'Uang', 'Zakat Fitrah', 'Prioritas 1-3 (17 KK)', 0, 850000, '2025-03-29', 'Bendahara'),
+(NULL, 'Prioritas 1', 'Uang', 'Zakat Mal', 'Prioritas 1 (10 KK)', 0, 3000000, '2025-03-29', 'Bendahara'),
+(NULL, 'Prioritas 1', 'Uang', 'Zakat Mal', 'Guru Honorer TPQ (4 guru)', 0, 1200000, '2025-03-29', 'Bendahara'),
+(NULL, 'Prioritas 2', 'Uang', 'Zakat Mal', 'Prioritas 2 (4 KK)', 0, 800000, '2025-03-29', 'Bendahara'),
+(NULL, '', 'Uang', 'Infaq', 'Anak yatim dan operasional amil', 0, 950000, '2025-03-29', 'Bendahara');
 
 INSERT INTO rules (rule_code, condition_text, result_text, execution_order, is_active, thresholds, source) VALUES
 ('R10', 'Dokumen KTP atau KK tidak lengkap', 'Pending Verifikasi', 1, 1, '{}', 'Wawancara Q12'),
@@ -72,13 +82,13 @@ INSERT INTO rules (rule_code, condition_text, result_text, execution_order, is_a
 ('R08', 'Jumlah anak sekolah 3 atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', 'Dicatat beban pendidikan tinggi', 5, 1, '{"schoolMin":3,"incomeLimit":2000000}', 'Wawancara Q3 dan Q10'),
 ('R12', 'Total dana tersedia kurang dari kebutuhan semua mustahik layak', 'Salurkan berurutan Prioritas 1 lalu Prioritas 2 lalu Prioritas 3', 6, 1, '{}', 'Wawancara Q9');
 
-INSERT INTO muzakki (id, full_name, address, zakat_type, amount, period_id) VALUES
-('MZ01', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 2500000, 1),
-('MZ02', 'Keluarga H. Mahmud', 'Warakas, Tanjung Priok', 'Zakat Mal', 1500000, 1),
-('MZ03', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 1000000, 1),
-('MZ04', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Fitrah', 250000, 1),
-('MZ05', 'Donatur TPQ', 'Warakas, Tanjung Priok', 'Infaq', 750000, 1),
-('MZ06', 'Infaq Jumat dan Kotak Amal TPQ', 'TPQ Al Fawwaz', 'Infaq', 850000, 1);
+INSERT INTO muzakki (id, full_name, address, zakat_type, period_id) VALUES
+('MZ01', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 1),
+('MZ02', 'Keluarga H. Mahmud', 'Warakas, Tanjung Priok', 'Zakat Mal', 1),
+('MZ03', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 1),
+('MZ04', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Fitrah', 1),
+('MZ05', 'Donatur TPQ', 'Warakas, Tanjung Priok', 'Infaq', 1),
+('MZ06', 'Infaq Jumat dan Kotak Amal TPQ', 'TPQ Al Fawwaz', 'Infaq', 1);
 
 INSERT INTO approvals (period_id, status, approver_id, approver_name, note, decided_at) VALUES
 (1, 'approved', 'U03', 'Kepala TPQ', 'Hasil Ramadan 1446 H disetujui setelah verifikasi lapangan', '2025-03-27 10:00:00'),

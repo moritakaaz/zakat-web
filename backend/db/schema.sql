@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS muzakki (
   full_name VARCHAR(100) NOT NULL,
   address VARCHAR(255) NOT NULL,
   zakat_type VARCHAR(50) NOT NULL,
-  amount INT NOT NULL DEFAULT 0,
   period_id INT NOT NULL,
   FOREIGN KEY (period_id) REFERENCES periods (id)
 );
@@ -57,9 +56,11 @@ CREATE TABLE IF NOT EXISTS zakat_receipts (
 
 CREATE TABLE IF NOT EXISTS zakat_distributions (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  mustahik_id VARCHAR(10) NOT NULL,
+  mustahik_id VARCHAR(10),
   priority VARCHAR(50) NOT NULL,
   distribution_type VARCHAR(50) NOT NULL,
+  zakat_type VARCHAR(50) NOT NULL DEFAULT '',
+  group_name VARCHAR(100) NOT NULL DEFAULT '',
   amount_rice_kg INT NOT NULL DEFAULT 0,
   amount_money INT NOT NULL DEFAULT 0,
   distribution_date DATE NOT NULL,

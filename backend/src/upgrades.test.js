@@ -65,8 +65,8 @@ store.mustahik = [
   household('T09', { monthlyIncome: 500000, dependents: 2, occupation: 'Guru Honorer TPQ' })
 ]
 store.muzakki = [
-  { id: 'MZ01', fullName: 'Donatur Satu', address: 'Warakas', zakatType: 'Zakat Mal', amount: 600000, periodId: 1 },
-  { id: 'MZ02', fullName: 'Donatur Dua', address: 'Warakas', zakatType: 'Infaq', amount: 400000, periodId: 1 }
+  { id: 'MZ01', fullName: 'Donatur Satu', address: 'Warakas', zakatType: 'Zakat Mal', periodId: 1 },
+  { id: 'MZ02', fullName: 'Donatur Dua', address: 'Warakas', zakatType: 'Infaq', periodId: 1 }
 ]
 store.receipts = [
   { id: 'RC01', periodId: 1, muzakkiId: 'MZ01', zakatType: 'Zakat Mal', quantityKg: 10, amountMoney: 600000, date: '2025-03-20', recordedBy: 'Bendahara' },
@@ -177,13 +177,13 @@ const server = app.listen(0, async () => {
     // Muzakki full CRUD and role guards.
     const muzakki = await request(port, 'GET', '/api/muzakki', null, bendahara)
     assert.strictEqual(muzakki.body.total, 2)
-    const muzakkiAsKepala = await request(port, 'POST', '/api/muzakki', { fullName: 'Kepala Coba', address: 'Warakas', zakatType: 'Infaq', amount: 100000, periodId: 1 }, kepala)
+    const muzakkiAsKepala = await request(port, 'POST', '/api/muzakki', { fullName: 'Kepala Coba', address: 'Warakas', zakatType: 'Infaq', periodId: 1 }, kepala)
     assert.strictEqual(muzakkiAsKepala.status, 403)
-    const createdMuzakki = await request(port, 'POST', '/api/muzakki', { fullName: 'Uji Muzakki', address: 'Warakas', zakatType: 'Infaq', amount: 100000, periodId: 1 }, sekretaris)
+    const createdMuzakki = await request(port, 'POST', '/api/muzakki', { fullName: 'Uji Muzakki', address: 'Warakas', zakatType: 'Infaq', periodId: 1 }, sekretaris)
     assert.strictEqual(createdMuzakki.status, 201)
     const muzakkiId = createdMuzakki.body.data.id
-    const updatedMuzakki = await request(port, 'PUT', '/api/muzakki/' + muzakkiId, { amount: 150000 }, sekretaris)
-    assert.strictEqual(updatedMuzakki.body.data.amount, 150000)
+    const updatedMuzakki = await request(port, 'PUT', '/api/muzakki/' + muzakkiId, { zakatType: 'Zakat Fitrah' }, sekretaris)
+    assert.strictEqual(updatedMuzakki.body.data.zakatType, 'Zakat Fitrah')
     const deleteMuzakkiAsSekretaris = await request(port, 'DELETE', '/api/muzakki/' + muzakkiId, null, sekretaris)
     assert.strictEqual(deleteMuzakkiAsSekretaris.status, 403)
     const deletedMuzakki = await request(port, 'DELETE', '/api/muzakki/' + muzakkiId, null, bendahara)
@@ -208,6 +208,24 @@ const server = app.listen(0, async () => {
     assert.ok(overRice.body.error.includes('sisa beras'))
     const allowed = await request(port, 'POST', '/api/distributions', { mustahikId: 'T01', periodId: 1, priority: 'Prioritas 1', form: 'Uang', quantityKg: 0, amountMoney: 100000, date: '2025-03-29', recordedBy: 'Bendahara' }, bendahara)
     assert.strictEqual(allowed.status, 201)
+
+    // Group distributions carry a group name instead of one mustahik.
+    // Money balance here is Rp 510.000 and rice balance is 0 kg.
+    const noRecipient = await request(port, 'POST', '/api/distributions', { periodId: 1, priority: '', form: 'Uang', quantityKg: 0, amountMoney: 100000, date: '2025-03-29', recordedBy: 'Bendahara' }, bendahara)
+    assert.strictEqual(noRecipient.status, 400)
+    assert.ok(noRecipient.body.error.includes('kelompok penerima'))
+    const groupAsSekretaris = await request(port, 'POST', '/api/distributions', { groupName: 'Prioritas 1 (2 KK)', periodId: 1, priority: 'Prioritas 1', zakatType: 'Zakat Mal', form: 'Uang', quantityKg: 0, amountMoney: 100000, date: '2025-03-29', recordedBy: 'Sekretaris' }, sekretaris)
+    assert.strictEqual(groupAsSekretaris.status, 403)
+    const group = await request(port, 'POST', '/api/distributions', { groupName: 'Prioritas 1 (2 KK)', periodId: 1, priority: 'Prioritas 1', zakatType: 'Zakat Mal', form: 'Uang', quantityKg: 0, amountMoney: 100000, date: '2025-03-29', recordedBy: 'Bendahara' }, bendahara)
+    assert.strictEqual(group.status, 201)
+    assert.strictEqual(group.body.data.groupName, 'Prioritas 1 (2 KK)')
+    assert.strictEqual(group.body.data.mustahikId, null)
+    const groupOverMoney = await request(port, 'POST', '/api/distributions', { groupName: 'Prioritas 1 (2 KK)', periodId: 1, priority: 'Prioritas 1', zakatType: 'Zakat Mal', form: 'Uang', quantityKg: 0, amountMoney: 500000, date: '2025-03-29', recordedBy: 'Bendahara' }, bendahara)
+    assert.strictEqual(groupOverMoney.status, 400)
+    assert.ok(groupOverMoney.body.error.includes('sisa saldo'))
+    const groupOverRice = await request(port, 'POST', '/api/distributions', { groupName: 'Prioritas 1 (2 KK)', periodId: 1, priority: 'Prioritas 1', zakatType: 'Zakat Fitrah', form: 'Beras', quantityKg: 1, amountMoney: 0, date: '2025-03-29', recordedBy: 'Bendahara' }, bendahara)
+    assert.strictEqual(groupOverRice.status, 400)
+    assert.ok(groupOverRice.body.error.includes('sisa beras'))
 
     // Dashboard follows the selected period.
     const dashboardTwo = await request(port, 'GET', '/api/dashboard?periodId=2', null, bendahara)

@@ -151,7 +151,6 @@ Data acuan berasal dari wawancara dengan pengurus dan pencatatan buku bendahara 
 - full_name
 - address
 - zakat_type
-- amount
 - period_id
 
 ### 7.4 zakat_receipts
@@ -170,10 +169,14 @@ Data acuan berasal dari wawancara dengan pengurus dan pencatatan buku bendahara 
 - mustahik_id
 - priority
 - distribution_type
+- zakat_type
+- group_name
 - amount_rice_kg
 - amount_money
 - distribution_date
 - recorded_by
+
+Penyaluran dapat ditujukan kepada satu mustahik atau kepada satu kelompok penerima. Pada penyaluran kelompok, mustahik_id kosong dan nama kelompok disimpan pada group_name.
 
 ### 7.6 rules
 

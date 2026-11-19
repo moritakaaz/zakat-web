@@ -19,6 +19,9 @@ router.get('/', (req, res) => {
 
 router.post('/', requireRoles('bendahara'), (req, res) => {
   const body = req.body || {}
+  if (!body.mustahikId && !body.groupName) {
+    return res.status(400).json({ error: 'Pilih mustahik atau isi kelompok penerima terlebih dahulu' })
+  }
   const mustahik = store.mustahik.find((row) => row.id === body.mustahikId)
   const periodId = Number(body.periodId || (mustahik && mustahik.periodId) || 1)
   const approval = store.approvals.find((row) => row.periodId === periodId)
@@ -38,7 +41,7 @@ router.post('/', requireRoles('bendahara'), (req, res) => {
     return res.status(400).json({ error: 'Jumlah beras melebihi sisa beras ' + (riceIn - riceOut) + ' kg' })
   }
   const next = store.distributions.reduce((max, row) => Math.max(max, Number(String(row.id).replace(/\D/g, '')) || 0), 0) + 1
-  const item = { periodId, id: 'DS' + String(next).padStart(2, '0'), ...body, periodId }
+  const item = { ...body, periodId, id: 'DS' + String(next).padStart(2, '0'), mustahikId: body.mustahikId || null, groupName: body.groupName || '', name: body.name || body.groupName || (mustahik && mustahik.fullName) || '', zakatType: body.zakatType || '', priority: body.priority || '', form: body.form || 'Uang' }
   store.distributions.push(item)
   persistDistribution(item)
   res.status(201).json({ data: item })

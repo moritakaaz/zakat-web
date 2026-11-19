@@ -37,8 +37,8 @@ function persistReceipt(item) {
 
 function persistDistribution(item) {
   return run(
-    'INSERT INTO zakat_distributions (mustahik_id, priority, distribution_type, amount_rice_kg, amount_money, distribution_date, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [item.mustahikId || item.id, item.priority || '', item.form || item.distributionType || 'Uang', item.quantityKg || 0, item.amountMoney || 0, item.date || new Date().toISOString().slice(0, 10), item.recordedBy || 'Bendahara']
+    'INSERT INTO zakat_distributions (mustahik_id, priority, distribution_type, zakat_type, group_name, amount_rice_kg, amount_money, distribution_date, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [item.mustahikId || null, item.priority || '', item.form || item.distributionType || 'Uang', item.zakatType || '', item.groupName || '', item.quantityKg || 0, item.amountMoney || 0, item.date || new Date().toISOString().slice(0, 10), item.recordedBy || 'Bendahara']
   )
 }
 
@@ -51,8 +51,8 @@ function persistApproval(approval) {
 
 function persistMuzakki(item) {
   return run(
-    'INSERT INTO muzakki (id, full_name, address, zakat_type, amount, period_id) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), address = VALUES(address), zakat_type = VALUES(zakat_type), amount = VALUES(amount), period_id = VALUES(period_id)',
-    [item.id, item.fullName, item.address || '', item.zakatType || '', item.amount || 0, item.periodId || 1]
+    'INSERT INTO muzakki (id, full_name, address, zakat_type, period_id) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), address = VALUES(address), zakat_type = VALUES(zakat_type), period_id = VALUES(period_id)',
+    [item.id, item.fullName, item.address || '', item.zakatType || '', item.periodId || 1]
   )
 }
 
