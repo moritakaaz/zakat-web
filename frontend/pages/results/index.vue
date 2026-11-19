@@ -105,7 +105,7 @@ const rankColumns = [
   { accessorKey: 'id', header: 'Kode' },
   { accessorKey: 'fullName', header: 'Nama Kepala Keluarga' },
   { accessorKey: 'perCapita', header: 'Per Kapita' },
-  { accessorKey: 'firedRules', header: 'Aturan Menyala' },
+  { accessorKey: 'firedRules', header: 'Aturan Terpenuhi' },
   { accessorKey: 'result', header: 'Hasil' }
 ]
 

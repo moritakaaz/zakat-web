@@ -84,10 +84,10 @@
           <ol class="mt-4 flex flex-col gap-2 text-sm">
             <li v-for="step in selected.trace" :key="step.code" class="flex gap-2">
               <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-              <span>{{ step.fired ? 'Menyala' : 'Tidak menyala' }} - {{ step.note }}</span>
+              <span>{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }} - {{ step.note }}</span>
             </li>
           </ol>
-          <p class="text-sm mt-4">Aturan yang menyala {{ selected.firedRules.join(', ') || 'tidak ada' }}.</p>
+          <p class="text-sm mt-4">Aturan yang terpenuhi {{ selected.firedRules.join(', ') || 'tidak ada' }}.</p>
         </div>
       </template>
     </UModal>
