@@ -143,7 +143,7 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 - Hasil Prioritas untuk ranking penerima. Tabel ranking dapat diurutkan dengan klik judul kolom, dan ada tombol untuk kembali ke urutan ranking
 - Laporan untuk rekap akhir dan arsip periode
 - Glosarium untuk istilah, 14 aturan dari API, arti status hasil, dan tugas tiap peran
-- Menu di layar kecil tampil sebagai drawer dari bawah dengan tombol tutup di kiri atas
+- Menu di layar kecil tampil sebagai drawer dari kiri dengan tombol tutup di kiri atas, sejajar dengan tombol hamburger yang membukanya
 
 ## Data Acuan
 

@@ -26,7 +26,7 @@
         </div>
       </main>
     </div>
-    <USlideover v-model:open="mobileNav" title="Zakat Al-Fawwaz" description="Yayasan Pendidikan Al-Quran Al-Fawwaz" side="bottom" :ui="{ content: 'max-h-[85vh] rounded-t-2xl', close: 'start-4 end-auto', header: 'ps-14', body: 'p-0' }">
+    <USlideover v-model:open="mobileNav" title="Zakat Al-Fawwaz" description="Yayasan Pendidikan Al-Quran Al-Fawwaz" side="left" :ui="{ content: 'max-w-xs', close: 'start-4 end-auto', header: 'ps-14', body: 'p-0' }">
       <template #body>
         <AppSidebar :show-header="false" full-width @navigate="mobileNav = false" />
       </template>
