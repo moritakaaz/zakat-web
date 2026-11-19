@@ -18,10 +18,10 @@
         </form>
         <div class="mt-6 border-t border-line pt-4 text-xs text-muted">
           <p class="font-semibold text-ink text-sm">Akun demo</p>
-          <p class="mt-1">bendahara@alfawwaz.or.id (bendahara)</p>
-          <p>sekretaris@alfawwaz.or.id (sekretaris)</p>
-          <p>kepala@alfawwaz.or.id (kepala)</p>
-          <p class="mt-2">Kata sandi demo apa saja dapat dipakai.</p>
+          <p class="mt-1">bendahara@alfawwaz.or.id, kata sandi bendahara123</p>
+          <p>sekretaris@alfawwaz.or.id, kata sandi sekretaris123</p>
+          <p>kepala@alfawwaz.or.id, kata sandi kepala123</p>
+          <p class="mt-2">Ganti kata sandi demo sebelum dipakai di produksi.</p>
         </div>
       </div>
     </NuxtLayout>
@@ -38,15 +38,15 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 
-function submit() {
+async function submit() {
   error.value = ''
   if (!email.value || !password.value) {
     error.value = 'Email dan kata sandi wajib diisi.'
     return
   }
-  const user = login(email.value.trim())
-  if (!user) {
-    error.value = 'Email tidak terdaftar. Gunakan salah satu akun demo.'
+  const found = await login(email.value.trim(), password.value)
+  if (!found) {
+    error.value = 'Email atau kata sandi salah.'
     return
   }
   navigateTo('/dashboard')

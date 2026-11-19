@@ -1,1 +1,22 @@
-{"dependencies":{"bcryptjs":"^2.4.3","cors":"^2.8.5","dotenv":"^16.4.5","express":"^4.21.2","jsonwebtoken":"^9.0.2","mysql2":"^3.11.3"},"description":"Backend for the zakat management system of Yayasan Pendidikan Al-Quran Al-Fawwaz","main":"src/index.js","name":"zakat-backend","private":true,"scripts":{"dev":"node --watch src/index.js","seed":"node src/seed/seed.js","start":"node src/index.js","test":"node src/engine/ruleEngine.test.js"},"version":"0.1.0"}
+{
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.3"
+  },
+  "description": "Backend for the zakat management system of Yayasan Pendidikan Al-Quran Al-Fawwaz",
+  "main": "src/index.js",
+  "name": "zakat-backend",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "seed": "node src/seed/seed.js",
+    "start": "node src/index.js",
+    "test": "node src/engine/ruleEngine.test.js && node src/auth/auth.test.js && node src/apiAuth.test.js && node src/db/db.test.js",
+    "test:smoke": "node ../frontend/scripts/smoke.mjs"
+  },
+  "version": "0.1.0"
+}

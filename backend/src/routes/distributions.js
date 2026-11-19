@@ -1,5 +1,6 @@
 const express = require('express')
 const { store } = require('../store')
+const { persistDistribution } = require('../db/persist')
 
 const router = express.Router()
 
@@ -12,6 +13,7 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   const item = { id: 'DS' + String(store.distributions.length + 1).padStart(2, '0'), ...req.body }
   store.distributions.push(item)
+  persistDistribution(item)
   res.status(201).json({ data: item })
 })
 

@@ -35,6 +35,22 @@ Untuk membuat database MySQL, jalankan file db schema sql lalu file db seed sql 
 npm run seed
 ```
 
+## Menjalankan MySQL dengan Docker
+
+Bila Docker sudah terpasang, jalankan MySQL dari folder proyek dengan perintah berikut.
+
+```
+docker compose up -d mysql
+```
+
+Perintah itu membuat database zakat_al_fawwaz beserta skema dan data awal 30 KK secara otomatis pada pertama kali volume dibuat. Setelah MySQL siap, jalankan perintah seed berikut sekali dari folder backend pada database baru.
+
+```
+npm run seed
+```
+
+Lalu jalankan backend seperti biasa. Backend memakai MySQL bila database terhubung dan memberi tahu lewat health bila database belum terhubung. Bila MySQL belum tersedia, backend tetap jalan dalam mode memori dengan data contoh. Mode memori hanya untuk pengembangan dan pengujian, bukan untuk produksi.
+
 ## Cara Menjalankan Frontend
 
 Buka terminal kedua lalu jalankan perintah berikut.
@@ -49,11 +65,17 @@ Frontend berjalan di port 3000. Buka alamat itu di browser dan masuk dengan sala
 
 ## Akun Demo
 
-- bendahara dengan email bendahara at alfawwaz.or.id dan peran bendahara
-- sekretaris dengan email sekretaris at alfawwaz.or.id dan peran sekretaris
-- kepala dengan email kepala at alfawwaz.or.id dan peran kepala
+Login memakai kata sandi yang diperiksa dengan bcrypt dan token JWT yang berlaku 8 jam. Token disimpan di browser dan dikirim pada setiap permintaan ke API.
 
-Kata sandi demo apa saja dapat dipakai pada versi awal ini.
+- bendahara dengan email bendahara at alfawwaz.or.id dan kata sandi bendahara123
+- sekretaris dengan email sekretaris at alfawwaz.or.id dan kata sandi sekretaris123
+- kepala dengan email kepala at alfawwaz.or.id dan kata sandi kepala123
+
+Ganti kata sandi demo dan JWT_SECRET sebelum dipakai di produksi.
+
+## Persetujuan Kepala TPQ
+
+Halaman Hasil Prioritas menampilkan status persetujuan untuk periode berjalan. Status awal adalah menunggu persetujuan. Hanya Kepala TPQ yang dapat menyetujui atau menolak hasil, beserta catatan dan waktu keputusan. Keputusan tersimpan di database pada tabel approvals dan dapat dibuka kembali dari halaman Hasil Prioritas.
 
 ## Halaman Aplikasi
 
@@ -86,10 +108,32 @@ Mesin rule memakai 14 aturan dari file data acuan. Aturan diperiksa berurutan da
 
 ## Pengujian
 
-Jalankan pengujian mesin rule dari folder backend dengan perintah berikut.
+Jalankan seluruh pengujian backend dari folder backend dengan perintah berikut.
 
 ```
 npm test
 ```
 
-Pengujian memastikan hasil untuk 30 KK sama persis dengan data acuan dan jejak Ahmad Hidayat menyalakan R01a dan R02.
+Pengujian mencakup mesin rule, autentikasi JWT, login dan perlindungan rute lewat API, persetujuan Kepala TPQ, dan mode memori bila MySQL tidak tersedia. Pengujian memastikan hasil untuk 30 KK sama persis dengan data acuan dan jejak Ahmad Hidayat menyalakan R01a dan R02.
+
+Pemeriksaan tampilan frontend dijalankan dari folder frontend dengan perintah berikut.
+
+```
+node scripts/smoke.mjs
+```
+
+Perintah itu memastikan kedelapan file halaman ada. Bila alamat preview sudah disiapkan lewat variabel FRONTEND_URL, perintah yang sama memeriksa kedelapan rute dan memastikan semuanya mengembalikan 200.
+
+## Penyiapan Produksi
+
+Langkah berikut menyiapkan aplikasi untuk dipakai di server.
+
+1. Siapkan server dengan NodeJS versi 20 atau lebih baru dan MySQL versi 8
+2. Salin proyek ke server lalu salin file backend env example menjadi file env dan isi kata sandi database dan JWT_SECRET dengan nilai rahasia yang panjang
+3. Jalankan MySQL lalu buat database dengan file db schema sql dan isi data awal dengan file db seed sql
+4. Dari folder backend jalankan npm install lalu npm start agar API berjalan di port 3001
+5. Dari folder frontend jalankan npm install lalu npm run build lalu npm run preview agar aplikasi berjalan di port 3000
+6. Pasang reverse proxy agar domain mengarah ke frontend dan API, lalu aktifkan HTTPS
+7. Ganti semua kata sandi demo dan JWT_SECRET, lalu uji login untuk ketiga peran
+
+Variabel lingkungan yang dipakai backend adalah PORT, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, dan JWT_EXPIRES_IN. Frontend memakai NUXT_PUBLIC_API_BASE untuk alamat API.

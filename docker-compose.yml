@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: zakat-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-zakat-root}
+      MYSQL_DATABASE: ${DB_NAME:-zakat_al_fawwaz}
+      MYSQL_USER: ${DB_USER:-zakat}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-zakat-pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - zakat-mysql-data:/var/lib/mysql
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zakat-mysql-data:

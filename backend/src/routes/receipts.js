@@ -1,5 +1,6 @@
 const express = require('express')
 const { store } = require('../store')
+const { persistReceipt } = require('../db/persist')
 
 const router = express.Router()
 
@@ -12,6 +13,7 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   const item = { id: 'RC' + String(store.receipts.length + 1).padStart(2, '0'), ...req.body }
   store.receipts.push(item)
+  persistReceipt(item)
   res.status(201).json({ data: item })
 })
 

@@ -48,32 +48,55 @@ export function useZakatData() {
 
 export function useSession() {
   const user = useState<any>('session-user', () => null)
+  const token = useState<string | null>('session-token', () => null)
   const config = useRuntimeConfig()
 
-  function login(email: string) {
-    const demoUsers = [
-      { name: 'Bendahara TPQ', email: 'bendahara@alfawwaz.or.id', role: 'bendahara' },
-      { name: 'Sekretaris TPQ', email: 'sekretaris@alfawwaz.or.id', role: 'sekretaris' },
-      { name: 'Kepala TPQ', email: 'kepala@alfawwaz.or.id', role: 'kepala' }
-    ]
-    const found = demoUsers.find((item) => item.email === email)
-    if (!found) return null
+  function saveSession(found: any, newToken: string) {
     user.value = found
-    if (import.meta.client) localStorage.setItem('zakat-user', JSON.stringify(found))
-    return found
+    token.value = newToken
+    if (import.meta.client) {
+      localStorage.setItem('zakat-user', JSON.stringify(found))
+      localStorage.setItem('zakat-token', newToken)
+    }
+  }
+
+  async function login(email: string, password: string) {
+    const res = await fetch(config.public.apiBase + '/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+    if (!res.ok) return null
+    const body = await res.json()
+    saveSession({ id: body.data.id, name: body.data.name, email: body.data.email, role: body.data.role }, body.data.token)
+    return user.value
   }
 
   function restore() {
     if (!import.meta.client || user.value) return
     const raw = localStorage.getItem('zakat-user')
+    const savedToken = localStorage.getItem('zakat-token')
     if (raw) user.value = JSON.parse(raw)
+    if (savedToken) token.value = savedToken
   }
 
   function logout() {
     user.value = null
-    if (import.meta.client) localStorage.removeItem('zakat-user')
+    token.value = null
+    if (import.meta.client) {
+      localStorage.removeItem('zakat-user')
+      localStorage.removeItem('zakat-token')
+    }
     navigateTo('/login')
   }
 
-  return { user, login, restore, logout, apiBase: config.public.apiBase }
+  // Fetch helper that sends the JWT on every protected request.
+  async function authFetch(path: string, options: any = {}) {
+    const headers = { ...(options.headers || {}) }
+    if (token.value) headers.Authorization = 'Bearer ' + token.value
+    if (options.body) headers['Content-Type'] = 'application/json'
+    return fetch(config.public.apiBase + path, { ...options, headers })
+  }
+
+  return { user, token, login, restore, logout, authFetch, apiBase: config.public.apiBase }
 }

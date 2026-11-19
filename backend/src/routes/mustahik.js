@@ -1,5 +1,6 @@
 const express = require('express')
 const { store } = require('../store')
+const { persistMustahik, deleteMustahik } = require('../db/persist')
 
 const router = express.Router()
 
@@ -26,6 +27,7 @@ router.post('/', (req, res) => {
   const id = 'KK' + String(store.mustahik.length + 1).padStart(2, '0')
   const item = { id, ...body }
   store.mustahik.push(item)
+  persistMustahik(item)
   res.status(201).json({ data: item })
 })
 
@@ -33,6 +35,7 @@ router.put('/:id', (req, res) => {
   const index = store.mustahik.findIndex((row) => row.id === req.params.id)
   if (index < 0) return res.status(404).json({ error: 'Mustahik not found' })
   store.mustahik[index] = { ...store.mustahik[index], ...req.body }
+  persistMustahik(store.mustahik[index])
   res.json({ data: store.mustahik[index] })
 })
 
@@ -40,6 +43,7 @@ router.delete('/:id', (req, res) => {
   const index = store.mustahik.findIndex((row) => row.id === req.params.id)
   if (index < 0) return res.status(404).json({ error: 'Mustahik not found' })
   store.mustahik.splice(index, 1)
+  deleteMustahik(req.params.id)
   res.json({ data: true })
 })
 

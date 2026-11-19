@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS periods (
 CREATE TABLE IF NOT EXISTS mustahik (
   id VARCHAR(10) PRIMARY KEY,
   full_name VARCHAR(100) NOT NULL,
+  nik VARCHAR(30) NOT NULL DEFAULT '',
   address VARCHAR(255) NOT NULL,
   occupation VARCHAR(100) NOT NULL,
   monthly_income INT NOT NULL DEFAULT 0,
@@ -72,4 +73,17 @@ CREATE TABLE IF NOT EXISTS rules (
   result_text VARCHAR(255) NOT NULL,
   execution_order INT NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS approvals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  period_id INT NOT NULL UNIQUE,
+  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  approver_id VARCHAR(10),
+  approver_name VARCHAR(100),
+  note TEXT,
+  decided_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (period_id) REFERENCES periods (id)
 );

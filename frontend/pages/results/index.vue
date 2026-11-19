@@ -9,6 +9,27 @@
 
     <div class="bg-white border border-line rounded-lg p-4 mt-4">
       <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-semibold">Persetujuan Kepala TPQ</h2>
+          <p class="text-sm text-muted">Hasil Ramadan 1446 H berlaku setelah disetujui Kepala TPQ.</p>
+        </div>
+        <span class="text-sm font-semibold">{{ approvalLabel }}</span>
+      </div>
+      <p v-if="approval.approverName" class="text-sm text-muted mt-2">Diputuskan oleh {{ approval.approverName }} pada {{ approval.decidedAt || '-' }}</p>
+      <p v-if="approval.note" class="text-sm mt-1">Catatan {{ approval.note }}</p>
+      <p v-if="approvalError" class="text-sm text-red-600 mt-2">{{ approvalError }}</p>
+      <div v-if="isKepala" class="flex flex-col gap-2 mt-4">
+        <InputText v-model="approvalNote" placeholder="Catatan persetujuan, boleh dikosongkan" class="w-full" />
+        <div class="flex gap-2">
+          <Button label="Setujui Hasil" size="small" @click="decide('approve')" />
+          <Button label="Tolak Hasil" severity="danger" size="small" @click="decide('reject')" />
+        </div>
+      </div>
+      <p v-else class="text-xs text-muted mt-3">Hanya Kepala TPQ yang dapat menyetujui atau menolak hasil ini.</p>
+    </div>
+
+    <div class="bg-white border border-line rounded-lg p-4 mt-4">
+      <div class="flex items-center justify-between">
         <h2 class="font-semibold">Ranking penerima</h2>
         <Button label="Unduh Laporan" severity="secondary" size="small" @click="download" />
       </div>
@@ -42,10 +63,48 @@
 </template>
 
 <script setup lang="ts">
-import { useZakatData } from '~/composables/useZakat'
+import { useZakatData, useSession } from '~/composables/useZakat'
 import { formatMoney } from '~/utils/format'
 
 const { evaluations, summary } = useZakatData()
+const { user, authFetch } = useSession()
+
+const approval = ref({ periodId: 1, status: 'pending', approverId: null, approverName: null, note: '', decidedAt: null })
+const approvalNote = ref('')
+const approvalError = ref('')
+const approvalLabel = computed(() => {
+  if (approval.value.status === 'approved') return 'Disetujui'
+  if (approval.value.status === 'rejected') return 'Ditolak'
+  return 'Menunggu Persetujuan'
+})
+const isKepala = computed(() => user.value?.role === 'kepala')
+
+async function loadApproval() {
+  try {
+    const res = await authFetch('/approvals/1')
+    if (!res.ok) return
+    const body = await res.json()
+    approval.value = body.data
+  } catch (error) {
+    approvalError.value = 'Status persetujuan dari server tidak dapat dimuat.'
+  }
+}
+
+async function decide(action: string) {
+  approvalError.value = ''
+  const res = await authFetch('/approvals/1/' + action, {
+    method: 'POST',
+    body: JSON.stringify({ note: approvalNote.value })
+  })
+  if (!res.ok) {
+    approvalError.value = 'Gagal menyimpan keputusan. Pastikan Anda masuk sebagai Kepala TPQ.'
+    return
+  }
+  const body = await res.json()
+  approval.value = body.data
+}
+
+onMounted(loadApproval)
 
 function download() {
   const lines = ['Hasil Prioritas Mustahik Ramadan 1446 H', '']

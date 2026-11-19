@@ -89,18 +89,20 @@ Sistem menggunakan aturan IF THEN. Forward Chaining berarti sistem mulai dari fa
 - R02 Jika nama sudah tercatat sebagai penerima pada periode yang sama maka status menjadi Duplikat dan proses berhenti
 - R03 Jika pendapatan per bulan kurang dari Rp 1.500.000 dan jumlah tanggungan 4 atau lebih maka hasil menjadi Prioritas 1
 - R04 Jika pendapatan per bulan kurang dari Rp 1.500.000 dan jumlah tanggungan 2 sampai 3 maka hasil menjadi Prioritas 1
-- R05 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 4 atau lebih maka hasil menjadi Prioritas 1
+- R05 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 4 atau lebih maka status tanggungan berat ditegaskan dan dipakai sebagai penentu seri saat ranking, hasil akhir tetap mengikuti aturan pendapatan
 - R06 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 2 sampai 3 maka hasil menjadi Prioritas 2
 - R07 Jika pendapatan per bulan 1.500.000 sampai 2.500.000 dan jumlah tanggungan 0 sampai 1 maka hasil menjadi Prioritas 3
 - R08 Jika pendapatan per bulan lebih dari Rp 2.500.000 dan jumlah tanggungan 4 atau lebih dan kondisi rumah tidak layak maka hasil menjadi Prioritas 2
 - R09 Jika pendapatan per bulan lebih dari Rp 2.500.000 dan jumlah tanggungan kurang dari 4 maka hasil menjadi Tidak Layak
 - R10 Jika status adalah guru honorer TPQ dengan honor kurang dari Rp 600.000 maka hasil menjadi Prioritas 1
-- R11 Jika status adalah janda atau dhuafa atau anak yatim dan pendapatan kurang dari Rp 2.500.000 maka hasil menjadi Prioritas 1
+- R11 Jika status adalah janda atau dhuafa atau anak yatim dan pendapatan kurang dari Rp 2.500.000 maka status rentan ditegaskan dan dipakai sebagai penentu seri saat ranking, hasil akhir tetap mengikuti aturan pendapatan
 - R12 Jika kondisi adalah sakit kronis atau disabilitas dan tidak punya penghasilan tetap maka hasil menjadi Prioritas 1
 - R13 Jika dana tidak cukup untuk semua Prioritas 1 maka urutkan berdasarkan pendapatan per kapita terendah lalu jumlah tanggungan terbanyak
 - R14 Jika dana masih tersisa setelah Prioritas 1 terpenuhi maka lanjutkan ke Prioritas 2 lalu Prioritas 3
 
 Aturan disimpan sebagai data di tabel aturan, bukan hard code di dalam kode program. Perubahan aturan dapat dilakukan tanpa mengubah kode utama.
+
+R05 dan R11 tidak menaikkan prioritas dengan sendirinya. Kedua aturan hanya menegaskan status dan dipakai sebagai penentu seri saat ranking. Bila kedua aturan dibaca sebagai peningkat tanpa syarat, hasil untuk 30 KK berubah menjadi Prioritas 1 sebanyak 22 KK dan Prioritas 3 menjadi 0 KK, sehingga tidak cocok dengan data acuan pada bagian 6. Hasil yang teruji adalah Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK.
 
 ## 6 Data Acuan
 
