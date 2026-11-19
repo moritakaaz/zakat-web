@@ -1,5 +1,5 @@
 <template>
-  <UCard class="shadow-sm ring-slate-200 mt-6 max-w-2xl">
+  <UCard :class="modal ? 'shadow-none ring-0' : 'shadow-sm ring-slate-200 mt-6 max-w-2xl'">
     <form class="flex flex-col gap-4" @submit.prevent="$emit('submit', form)">
       <UFormField label="Nama kepala keluarga" name="fullName">
         <UInput id="fullName" v-model="form.fullName" class="w-full" />
@@ -50,7 +50,7 @@
       <UAlert v-if="saved" color="success" variant="soft" :title="'Data tersimpan dengan hasil ' + saved + '.'" icon="i-lucide-circle-check" />
       <div class="flex flex-wrap gap-2">
         <UButton type="submit" icon="i-lucide-save">{{ submitLabel }}</UButton>
-        <UButton color="neutral" variant="soft" @click="navigateTo('/mustahik')">Kembali</UButton>
+        <UButton v-if="!modal" color="neutral" variant="soft" @click="navigateTo('/mustahik')">Kembali</UButton>
       </div>
     </form>
   </UCard>
@@ -59,10 +59,14 @@
 <script setup lang="ts">
 import { formatMoney } from '~/utils/format'
 
-const props = defineProps<{ initial: any, duplicateWarning?: string, error?: string, saved?: string, submitLabel: string }>()
+const props = defineProps<{ initial: any, duplicateWarning?: string, error?: string, saved?: string, submitLabel: string, modal?: boolean }>()
 defineEmits(['submit'])
 
 const form = ref({ ...props.initial })
+
+watch(() => props.initial, (value) => {
+  form.value = { ...value }
+}, { deep: true })
 const perCapitaValue = computed(() => {
   if (!form.value.dependents || form.value.dependents <= 0) return form.value.monthlyIncome || 0
   return Math.floor((form.value.monthlyIncome || 0) / form.value.dependents)

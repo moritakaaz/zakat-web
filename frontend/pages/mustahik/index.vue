@@ -24,7 +24,7 @@
           </template>
           <template #actions-cell="{ row }">
             <div v-if="canInput" class="flex gap-1" @click.stop>
-              <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="navigateTo('/mustahik/' + row.original.id)">Ubah</UButton>
+              <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openEdit(row.original)">Ubah</UButton>
               <UButton v-if="canDelete" color="error" variant="soft" size="sm" icon="i-lucide-trash-2" @click="askDelete(row.original)">Hapus</UButton>
             </div>
           </template>
@@ -35,8 +35,15 @@
         <UPagination v-model:page="page" :total="filtered.length" :items-per-page="10" />
       </div>
       <UAlert v-if="filtered.length === 0" color="info" variant="soft" title="Tidak ada mustahik yang cocok dengan pencarian." icon="i-lucide-info" class="mt-4" />
+      <UAlert v-if="editSaved" color="success" variant="soft" :title="'Data tersimpan dengan hasil ' + editSaved + '.'" icon="i-lucide-circle-check" class="mt-4" />
       <UAlert v-if="deleteError" color="error" variant="soft" :title="deleteError" icon="i-lucide-circle-x" class="mt-4" />
     </UCard>
+
+    <UModal v-model:open="showEdit" title="Ubah mustahik" :ui="{ content: 'max-w-2xl' }">
+      <template #body>
+        <MustahikForm v-if="editing" :initial="editing" :duplicate-warning="editDuplicateWarning" :error="editError" submit-label="Simpan Perubahan" :modal="true" @submit="submitEdit" />
+      </template>
+    </UModal>
 
     <UModal v-model:open="showDelete" title="Hapus mustahik" :description="'Hapus ' + (toDelete?.fullName || '') + ' (' + (toDelete?.id || '') + ') dari data periode ini? Tindakan ini tidak dapat dibatalkan.'">
       <template #footer>
@@ -70,10 +77,11 @@ import { useZakatData, useSession, usePeriod, useRules } from '~/composables/use
 import { evaluateMustahik } from '~/utils/ruleEngine'
 import { formatMoney } from '~/utils/format'
 
-const { mustahik, periodMustahik, evaluations, deleteMustahik } = useZakatData()
+const { mustahik, periodMustahik, evaluations, deleteMustahik, updateMustahik } = useZakatData()
 const { canInput, canDelete, authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
 const { rules, loadRules } = useRules()
+const route = useRoute()
 const search = ref('')
 const filterResult = ref('Semua hasil')
 const filterOptions = ['Semua hasil', 'Prioritas 1', 'Prioritas 2', 'Prioritas 3', 'Pending Verifikasi', 'Tidak Layak']
@@ -83,6 +91,11 @@ const selected = ref<any>(null)
 const showDelete = ref(false)
 const toDelete = ref<any>(null)
 const deleteError = ref('')
+const showEdit = ref(false)
+const editing = ref<any>(null)
+const editError = ref('')
+const editDuplicateWarning = ref('')
+const editSaved = ref('')
 
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 const columns = computed(() => {
@@ -122,6 +135,47 @@ function openDetail(item: any) {
   showDetail.value = true
 }
 
+function openEdit(item: any) {
+  editing.value = { ...item }
+  delete editing.value.result
+  delete editing.value.perCapita
+  editError.value = ''
+  editDuplicateWarning.value = ''
+  editSaved.value = ''
+  showEdit.value = true
+}
+
+function submitEdit(form: any) {
+  if (!editing.value) return
+  editError.value = ''
+  editDuplicateWarning.value = ''
+  editSaved.value = ''
+  if (!form.fullName || !form.address) {
+    editError.value = 'Nama kepala keluarga dan alamat wajib diisi.'
+    return
+  }
+  if (!form.nik || (String(form.nik).replace(/\D/g, '').length !== 16 && !String(form.nik).includes('•'))) {
+    editError.value = 'NIK wajib diisi 16 digit angka.'
+    return
+  }
+  const digits = String(form.nik).replace(/\D/g, '')
+  const cleanNik = digits.length === 16 ? digits : form.nik
+  const duplicate = mustahik.value.some((row: any) => row.nik === cleanNik && row.id !== editing.value.id && Number(row.periodId || 1) === selectedPeriodId.value)
+  if (duplicate) {
+    editDuplicateWarning.value = 'NIK ini sudah tercatat pada periode yang sama. Data tidak disimpan.'
+    editError.value = 'NIK sudah tercatat pada periode yang sama.'
+    return
+  }
+  updateMustahik(editing.value.id, { ...form, nik: cleanNik })
+  authFetch('/mustahik/' + editing.value.id, { method: 'PUT', body: JSON.stringify({ ...form, nik: cleanNik }) }).catch(() => {})
+  const updated = mustahik.value.find((row: any) => row.id === editing.value.id)
+  const niks = mustahik.value.map((row: any) => row.nik)
+  const result = evaluateMustahik(updated, niks, rules.value.length ? rules.value : undefined).result
+  editSaved.value = result
+  showEdit.value = false
+  editing.value = null
+}
+
 function askDelete(item: any) {
   toDelete.value = item
   deleteError.value = ''
@@ -141,5 +195,12 @@ async function confirmDelete() {
   toDelete.value = null
 }
 
-onMounted(() => loadRules(authFetch))
+onMounted(() => {
+  loadRules(authFetch)
+  const editId = route.query.edit
+  if (typeof editId === 'string' && canInput.value) {
+    const item = mustahik.value.find((row: any) => row.id === editId)
+    if (item) openEdit(item)
+  }
+})
 </script>

@@ -79,7 +79,7 @@ Halaman Hasil Prioritas menampilkan status persetujuan untuk periode berjalan. S
 
 ## Ikon dan Chart
 
-Tampilan memakai satu set ikon saja yaitu Lucide lewat Nuxt UI. Ikon dipakai di menu samping, kartu dashboard, tombol, dan badge prioritas. Dashboard memakai Chart.js langsung dengan dua chart saja yaitu chart donut sebaran prioritas dan chart bar penerimaan lawan penyaluran untuk uang dan beras. Tidak ada chart tren bulanan karena data acuan hanya satu periode yaitu Ramadan 1446 H.
+Tampilan memakai satu set ikon saja yaitu Lucide lewat Nuxt UI. Ikon dipakai di menu samping, kartu dashboard, tombol, dan badge prioritas. Tampilan aplikasi hanya memakai mode terang atas permintaan pengguna dan tidak memakai mode gelap. Dashboard memakai Chart.js langsung dengan dua chart saja yaitu chart donut sebaran prioritas dan chart bar penerimaan lawan penyaluran untuk uang dan beras. Tidak ada chart tren bulanan karena data acuan hanya satu periode yaitu Ramadan 1446 H.
 
 ## Aturan yang Dapat Diubah
 

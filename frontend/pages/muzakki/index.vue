@@ -29,7 +29,7 @@
           <template #actions-cell="{ row }">
             <div v-if="canInput" class="flex gap-1">
               <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openEdit(row.original)">Ubah</UButton>
-              <UButton v-if="canDelete" color="error" variant="soft" size="sm" icon="i-lucide-trash-2" @click="removeMuzakki(row.original.id)">Hapus</UButton>
+              <UButton v-if="canDelete" color="error" variant="soft" size="sm" icon="i-lucide-trash-2" @click="askDelete(row.original)">Hapus</UButton>
             </div>
           </template>
         </UTable>
@@ -39,6 +39,15 @@
       </div>
       <UAlert v-if="!muzakki.length" color="info" variant="soft" title="Data muzakki dari server belum dimuat. Pastikan backend berjalan dan Anda sudah masuk." icon="i-lucide-info" class="mt-4" />
     </UCard>
+
+    <UModal v-model:open="showDelete" title="Hapus muzakki" :description="'Hapus ' + (toDelete?.fullName || '') + ' (' + (toDelete?.id || '') + ') dari data periode ini? Tindakan ini tidak dapat dibatalkan.'">
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton color="error" @click="confirmDelete">Hapus</UButton>
+          <UButton color="neutral" variant="soft" @click="showDelete = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
 
     <UModal v-model:open="showForm" :title="editingId ? 'Ubah muzakki' : 'Tambah muzakki'">
       <template #body>
@@ -121,6 +130,8 @@ const riceIn = computed(() => receipts.reduce((sum, row) => sum + row.quantityKg
 const muzakki = ref<any[]>([])
 const muzakkiError = ref('')
 const showForm = ref(false)
+const showDelete = ref(false)
+const toDelete = ref<any>(null)
 const editingId = ref('')
 const form = ref({ fullName: '', address: '', zakatType: 'Infaq', amount: 0 })
 const muzakkiPageNo = ref(1)
@@ -199,13 +210,23 @@ async function saveMuzakki() {
   await loadMuzakki()
 }
 
-async function removeMuzakki(id: string) {
+function askDelete(item: any) {
+  toDelete.value = item
   muzakkiError.value = ''
-  const res = await authFetch('/muzakki/' + id, { method: 'DELETE' })
+  showDelete.value = true
+}
+
+async function confirmDelete() {
+  if (!toDelete.value) return
+  muzakkiError.value = ''
+  const res = await authFetch('/muzakki/' + toDelete.value.id, { method: 'DELETE' })
   if (!res.ok) {
     muzakkiError.value = 'Gagal menghapus muzakki. Hanya Bendahara yang dapat menghapus data.'
+    showDelete.value = false
     return
   }
+  showDelete.value = false
+  toDelete.value = null
   await loadMuzakki()
 }
 

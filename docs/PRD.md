@@ -208,6 +208,7 @@ Data acuan berasal dari wawancara dengan pengurus dan pencatatan buku bendahara 
 - Frontend NuxtJS dengan TailwindCSS
 - UI Library Nuxt UI sebagai library komponen untuk tampilan aplikasi
 - Migrasi dari PrimeVue ke Nuxt UI dilakukan atas permintaan pengguna setelah melihat aplikasi berjalan
+- Tampilan aplikasi hanya memakai mode terang atas permintaan pengguna dan tidak memakai mode gelap
 - Backend NodeJS dengan Express atau Hono
 - Database MySQL
 - Bahasa pemrograman JavaScript dan TypeScript
