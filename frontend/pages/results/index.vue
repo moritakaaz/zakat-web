@@ -42,6 +42,18 @@
       </template>
       <div class="overflow-x-auto">
         <UTable :data="rankPage" :columns="rankColumns">
+          <template #id-header>
+            <SortButton label="Kode" column="id" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #fullName-header>
+            <SortButton label="Nama Kepala Keluarga" column="fullName" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #perCapita-header>
+            <SortButton label="Per Kapita" column="perCapita" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #result-header>
+            <SortButton label="Hasil" column="result" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
           <template #rank-cell="{ row }">
             <span class="tnum">{{ (page - 1) * 10 + row.index + 1 }}</span>
           </template>
@@ -59,7 +71,10 @@
       <div class="flex justify-center mt-4">
         <UPagination v-model:page="page" :total="evaluations.length" :items-per-page="10" />
       </div>
-      <p class="text-xs text-slate-500 mt-3">Aturan R12 dipakai di sini. Bila dana tidak cukup, Prioritas 1 disalurkan pertama, lalu Prioritas 2, lalu Prioritas 3.</p>
+      <p class="text-xs text-slate-500 mt-3">Aturan R12 dipakai di sini. Bila dana tidak cukup, Prioritas 1 disalurkan pertama, lalu Prioritas 2, lalu Prioritas 3. Klik judul kolom untuk mengurutkan, klik ketiga kalinya untuk kembali ke urutan ranking.</p>
+      <div v-if="sortKey" class="mt-3">
+        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-rotate-ccw" @click="resetPage">Kembali ke urutan ranking</UButton>
+      </div>
     </UCard>
   </div>
 </template>
@@ -67,13 +82,23 @@
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney } from '~/utils/format'
+import { useTableSort, resultRank } from '~/utils/tableSort'
 
 const { evaluations, summary } = useZakatData()
 const { user, authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 const page = ref(1)
-const rankPage = computed(() => evaluations.value.slice((page.value - 1) * 10, page.value * 10))
+const { sortKey, sortDirection, toggleSort, clearSort, sortRows } = useTableSort()
+const sortedEvaluations = computed(() => sortRows(evaluations.value, (row: any, key: string) => key === 'result' ? (resultRank[row.result] ?? 99) : row[key]))
+const rankPage = computed(() => sortedEvaluations.value.slice((page.value - 1) * 10, page.value * 10))
+
+function resetPage() {
+  clearSort()
+  page.value = 1
+}
+
+watch(sortKey, () => { page.value = 1 })
 const rankColumns = [
   { id: 'rank', header: 'Urutan' },
   { accessorKey: 'id', header: 'Kode' },

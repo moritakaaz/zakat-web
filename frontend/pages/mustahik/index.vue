@@ -3,7 +3,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-xl font-bold text-slate-900">Data Mustahik</h1>
-        <p class="text-sm text-slate-500 mt-1">{{ periodMustahik.length }} KK pada periode {{ periodName }}. Klik baris untuk melihat jejak rule.</p>
+        <p class="text-sm text-slate-500 mt-1">{{ periodMustahik.length }} KK pada periode {{ periodName }}. Klik judul kolom untuk mengurutkan, klik baris untuk melihat jejak rule.</p>
       </div>
       <UButton v-if="canInput" icon="i-lucide-user-plus" @click="navigateTo('/mustahik/new')">Tambah Mustahik</UButton>
     </div>
@@ -16,6 +16,27 @@
 
       <div class="overflow-x-auto">
         <UTable :data="pageRows" :columns="columns" :on-select="(row) => openDetail(row.original)">
+          <template #id-header>
+            <SortButton label="Kode" column="id" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #fullName-header>
+            <SortButton label="Nama Kepala Keluarga" column="fullName" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #occupation-header>
+            <SortButton label="Pekerjaan" column="occupation" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #monthlyIncome-header>
+            <SortButton label="Pendapatan" column="monthlyIncome" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #dependents-header>
+            <SortButton label="Tanggungan" column="dependents" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #houseCondition-header>
+            <SortButton label="Rumah" column="houseCondition" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #result-header>
+            <SortButton label="Hasil" column="result" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
           <template #monthlyIncome-cell="{ row }">
             <span class="tnum">{{ formatMoney(row.original.monthlyIncome) }}</span>
           </template>
@@ -76,6 +97,7 @@
 import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
 import { formatMoney } from '~/utils/format'
+import { useTableSort, resultRank } from '~/utils/tableSort'
 
 const { mustahik, periodMustahik, evaluations, deleteMustahik, updateMustahik } = useZakatData()
 const { canInput, canDelete, authFetch } = useSession()
@@ -86,6 +108,8 @@ const search = ref('')
 const filterResult = ref('Semua hasil')
 const filterOptions = ['Semua hasil', 'Prioritas 1', 'Prioritas 2', 'Prioritas 3', 'Pending Verifikasi', 'Tidak Layak']
 const page = ref(1)
+const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
+const sortValue = (row: any, key: string) => key === 'result' ? (resultRank[row.result] ?? 99) : row[key]
 const showDetail = ref(false)
 const selected = ref<any>(null)
 const showDelete = ref(false)
@@ -125,9 +149,10 @@ const filtered = computed(() => {
     return [item.fullName, item.address, item.occupation].join(' ').toLowerCase().includes(query)
   })
 })
-const pageRows = computed(() => filtered.value.slice((page.value - 1) * 10, page.value * 10))
+const sorted = computed(() => sortRows(filtered.value, sortValue))
+const pageRows = computed(() => sorted.value.slice((page.value - 1) * 10, page.value * 10))
 
-watch([search, filterResult], () => { page.value = 1 })
+watch([search, filterResult, sortKey], () => { page.value = 1 })
 
 function openDetail(item: any) {
   const niks = mustahik.value.map((row) => row.nik)

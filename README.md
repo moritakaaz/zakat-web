@@ -29,7 +29,7 @@ npm start
 
 Backend berjalan di port 3001. Buka alamat health di browser untuk memastikan backend hidup. Bila MySQL belum dipasang, backend tetap jalan dengan data contoh dan memberi tahu bahwa database belum terhubung.
 
-Untuk membuat database MySQL, jalankan file db schema sql lalu file db seed sql di MySQL. Setelah itu jalankan perintah seed berikut.
+Untuk membuat database MySQL secara manual, jalankan perintah seed berikut dari folder backend. Perintah itu menjalankan file db schema sql lalu file db seed sql. Jangan jalankan kedua file itu di MySQL lalu menjalankan npm run seed karena data seed akan dimasukkan dua kali dan gagal duplikat.
 
 ```
 npm run seed
@@ -43,13 +43,19 @@ Bila Docker sudah terpasang, jalankan MySQL dari folder proyek dengan perintah b
 docker compose up -d mysql
 ```
 
-Perintah itu membuat database zakat_al_fawwaz beserta skema dan data awal 30 KK secara otomatis pada pertama kali volume dibuat. Setelah MySQL siap, jalankan perintah seed berikut sekali dari folder backend pada database baru.
-
-```
-npm run seed
-```
+Perintah itu membuat database zakat_al_fawwaz beserta skema dan data awal 30 KK secara otomatis pada pertama kali volume dibuat. Jangan jalankan npm run seed lagi setelah docker compose up karena data seed sudah masuk dan perintah itu akan gagal duplikat. Perintah npm run seed hanya dipakai bila MySQL dipasang manual tanpa Docker.
 
 Lalu jalankan backend seperti biasa. Backend memakai MySQL bila database terhubung dan memberi tahu lewat health bila database belum terhubung. Bila MySQL belum tersedia, backend tetap jalan dalam mode memori dengan data contoh. Mode memori hanya untuk pengembangan dan pengujian, bukan untuk produksi.
+
+## Keadaan Data MySQL
+
+Bagian ini menjelaskan isi database pada tiap keadaan agar tidak ada data yang muncul tanpa jelas asalnya.
+
+- Hanya schema sql berarti database kosong. Aplikasi menampilkan 0 mustahik, 0 muzakki, 0 penerimaan, dan 0 penyaluran, serta tidak ada pengguna dan tidak ada aturan. Login belum bisa sebelum data seed dimasukkan.
+- Seed sql atau npm run seed berarti data acuan Excel masuk. Isinya 30 KK dengan Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK, ditambah 6 muzakki, 10 baris penerimaan, 14 aturan, 2 periode, dan 3 akun demo.
+- Data seed berisi 10 baris penerimaan dengan beras 130 kg dan uang Rp 7.450.000, tetapi belum berisi baris penyaluran. Karena itu penyaluran di mode MySQL mulai dari 0 sampai dicatat lewat aplikasi, sedangkan mode memori menampilkan total penyaluran Excel yaitu beras 130 kg dan uang Rp 6.800.000.
+- Docker compose up pada volume baru membuat skema dan data seed otomatis. Menjalankan schema sql lagi pada database yang sudah berisi data tidak menghapus data karena schema sql memakai IF NOT EXISTS dan tidak berisi INSERT atau DELETE.
+- Untuk mulai dari kosong pada database yang sudah terisi seed, hapus dulu databasenya lalu jalankan schema sql saja. Pada MySQL manual, jalankan DROP DATABASE zakat_al_fawwaz lalu jalankan schema sql. Pada Docker, jalankan docker compose down -v untuk menghapus volume. Volume baru yang dibuat oleh up berikutnya selalu menjalankan seed otomatis, jadi untuk database kosong, hapus database hasil seed dengan DROP DATABASE lalu jalankan schema sql saja.
 
 ## Cara Menjalankan Frontend
 
@@ -101,11 +107,11 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 
 - Login untuk masuk aplikasi
 - Dashboard untuk total muzakki, mustahik, penerimaan, penyaluran, dan sisa saldo
-- Data Mustahik untuk tabel 30 KK dengan pencarian dan pagination, serta ubah dan hapus data
+- Data Mustahik untuk tabel 30 KK dengan pencarian dan pagination, serta ubah dan hapus data. Judul kolom dapat diklik untuk mengurutkan tabel, klik kedua membalik urutan, dan klik ketiga mengembalikan urutan awal
 - Tambah Mustahik untuk form data calon penerima dengan NIK asli dan peringatan duplikat
-- Muzakki dan Penerimaan untuk pencatatan penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus
+- Muzakki dan Penerimaan untuk pencatatan penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus. Tabel muzakki, penerimaan, dan penyaluran dapat diurutkan dengan klik judul kolom
 - Proses Rule untuk 14 aturan dan jejak Forward Chaining
-- Hasil Prioritas untuk ranking penerima
+- Hasil Prioritas untuk ranking penerima. Tabel ranking dapat diurutkan dengan klik judul kolom, dan ada tombol untuk kembali ke urutan ranking
 - Laporan untuk rekap akhir dan arsip periode
 
 ## Data Acuan

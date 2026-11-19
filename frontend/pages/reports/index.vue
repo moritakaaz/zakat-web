@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold text-slate-900">Laporan</h1>
-    <p class="text-sm text-slate-500 mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}.</p>
+    <p class="text-sm text-slate-500 mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}. Klik judul kolom pada arsip untuk mengurutkan.</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Beras masuk" :value="formatKg(riceIn)" :hint="formatKg(riceIn)" icon="i-lucide-wheat" />
@@ -46,7 +46,19 @@
       </template>
       <p v-if="periodError" class="text-sm text-red-600 mt-3">{{ periodError }}</p>
       <div class="overflow-x-auto mt-3">
-        <UTable :data="periods" :columns="periodColumns">
+        <UTable :data="sortedPeriods" :columns="periodColumns">
+          <template #periodName-header>
+            <SortButton label="Periode" column="periodName" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #startDate-header>
+            <SortButton label="Mulai" column="startDate" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #endDate-header>
+            <SortButton label="Selesai" column="endDate" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #status-header>
+            <SortButton label="Status" column="status" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
           <template #status-cell="{ row }">
             <UBadge :color="row.original.status === 'active' ? 'success' : 'neutral'" variant="soft">{{ row.original.status }}</UBadge>
           </template>
@@ -90,10 +102,13 @@
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
+import { useTableSort } from '~/utils/tableSort'
 
 const { receipts, distributions, summary } = useZakatData()
 const { authFetch, isBendahara } = useSession()
 const { periods, selectedPeriodId, selectPeriod, loadPeriods } = usePeriod()
+const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
+const sortedPeriods = computed(() => sortRows(periods.value, (row: any, key: string) => row[key]))
 
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 const isPeriodOne = computed(() => selectedPeriodId.value === 1)

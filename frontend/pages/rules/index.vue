@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold text-slate-900">Proses Rule</h1>
-    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Fakta diperiksa dari R10 sampai R08 secara berurutan.</p>
+    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Fakta diperiksa dari R10 sampai R08 secara berurutan. Klik judul kolom untuk mengurutkan.</p>
 
     <UCard class="shadow-sm ring-slate-200 mt-6">
       <template #header>
@@ -19,7 +19,25 @@
       <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
       <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
       <div class="overflow-x-auto mt-4">
-        <UTable :data="rules" :columns="ruleColumns">
+        <UTable :data="sortedRules" :columns="ruleColumns">
+          <template #code-header>
+            <SortButton label="Kode" column="code" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #condition-header>
+            <SortButton label="Kondisi IF" column="condition" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #result-header>
+            <SortButton label="Kesimpulan THEN" column="result" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #order-header>
+            <SortButton label="Urutan" column="order" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #threshold-header>
+            <SortButton label="Ambang" column="threshold" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #isActive-header>
+            <SortButton label="Aktif" column="isActive" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
           <template #threshold-cell="{ row }">
             <span class="tnum text-sm">{{ thresholdText(row.original) }}</span>
           </template>
@@ -89,11 +107,14 @@
 <script setup lang="ts">
 import { useZakatData, useSession, useRules, usePeriod } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
+import { useTableSort } from '~/utils/tableSort'
 
 const { mustahik, periodMustahik, summary } = useZakatData()
 const { authFetch, canRunRules } = useSession()
 const { rules, loadRules } = useRules()
 const { selectedPeriodId } = usePeriod()
+const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
+const sortedRules = computed(() => sortRows(rules.value, (row: any, key: string) => key === 'threshold' ? thresholdText(row) : key === 'isActive' ? (row.isActive ? 1 : 0) : row[key]))
 const ran = ref(false)
 const runSummary = ref<Record<string, number>>({})
 const loadError = ref('')

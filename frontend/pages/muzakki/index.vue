@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold text-slate-900">Muzakki dan Penerimaan</h1>
-    <p class="text-sm text-slate-500 mt-1">Pencatatan penerimaan zakat {{ periodName }} mengikuti buku bendahara.</p>
+    <p class="text-sm text-slate-500 mt-1">Pencatatan penerimaan zakat {{ periodName }} mengikuti buku bendahara. Klik judul kolom untuk mengurutkan.</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada data acuan" icon="i-lucide-wheat" />
@@ -23,6 +23,21 @@
       <p v-if="muzakkiError" class="text-sm text-red-600 mt-3">{{ muzakkiError }}</p>
       <div class="overflow-x-auto">
         <UTable :data="muzakkiPage" :columns="muzakkiColumns">
+          <template #id-header>
+            <SortButton label="Kode" column="id" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          </template>
+          <template #fullName-header>
+            <SortButton label="Nama" column="fullName" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          </template>
+          <template #address-header>
+            <SortButton label="Alamat" column="address" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          </template>
+          <template #zakatType-header>
+            <SortButton label="Jenis Zakat" column="zakatType" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          </template>
+          <template #amount-header>
+            <SortButton label="Jumlah" column="amount" :sort-key="muzakkiSortKey" :sort-direction="muzakkiSortDirection" @toggle="toggleMuzakkiSort" />
+          </template>
           <template #amount-cell="{ row }">
             <span class="tnum">{{ formatMoney(row.original.amount) }}</span>
           </template>
@@ -83,6 +98,24 @@
       </template>
       <div class="overflow-x-auto">
         <UTable :data="receiptsPage" :columns="receiptColumns">
+          <template #date-header>
+            <SortButton label="Tanggal" column="date" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
+          <template #zakatType-header>
+            <SortButton label="Jenis Zakat" column="zakatType" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
+          <template #name-header>
+            <SortButton label="Muzakki" column="name" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
+          <template #form-header>
+            <SortButton label="Bentuk" column="form" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
+          <template #quantityKg-header>
+            <SortButton label="Beras (kg)" column="quantityKg" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
+          <template #amountMoney-header>
+            <SortButton label="Nilai Uang" column="amountMoney" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
+          </template>
           <template #quantityKg-cell="{ row }">
             <span class="tnum">{{ row.original.quantityKg || '-' }}</span>
           </template>
@@ -101,7 +134,22 @@
         <h2 class="font-semibold text-slate-900">Penyaluran kepada mustahik</h2>
       </template>
       <div class="overflow-x-auto">
-        <UTable :data="distributions" :columns="distributionColumns">
+        <UTable :data="sortedDistributions" :columns="distributionColumns">
+          <template #date-header>
+            <SortButton label="Tanggal" column="date" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
+          <template #zakatType-header>
+            <SortButton label="Jenis Zakat" column="zakatType" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
+          <template #name-header>
+            <SortButton label="Kelompok Penerima" column="name" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
+          <template #quantityKg-header>
+            <SortButton label="Beras (kg)" column="quantityKg" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
+          <template #amountMoney-header>
+            <SortButton label="Nilai Uang" column="amountMoney" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
+          </template>
           <template #quantityKg-cell="{ row }">
             <span class="tnum">{{ row.original.quantityKg || '-' }}</span>
           </template>
@@ -117,6 +165,7 @@
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
+import { useTableSort } from '~/utils/tableSort'
 
 const { receipts, distributions } = useZakatData()
 const { authFetch, canInput, canDelete } = useSession()
@@ -136,8 +185,16 @@ const editingId = ref('')
 const form = ref({ fullName: '', address: '', zakatType: 'Infaq', amount: 0 })
 const muzakkiPageNo = ref(1)
 const receiptsPageNo = ref(1)
-const muzakkiPage = computed(() => muzakki.value.slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
-const receiptsPage = computed(() => receipts.slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
+const { sortKey: muzakkiSortKey, sortDirection: muzakkiSortDirection, toggleSort: toggleMuzakkiSort, sortRows: sortMuzakkiRows } = useTableSort()
+const { sortKey: receiptSortKey, sortDirection: receiptSortDirection, toggleSort: toggleReceiptSort, sortRows: sortReceiptRows } = useTableSort()
+const { sortKey: distributionSortKey, sortDirection: distributionSortDirection, toggleSort: toggleDistributionSort, sortRows: sortDistributionRows } = useTableSort()
+const plainValue = (row: any, key: string) => row[key]
+const muzakkiPage = computed(() => sortMuzakkiRows(muzakki.value, plainValue).slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
+const receiptsPage = computed(() => sortReceiptRows(receipts, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
+const sortedDistributions = computed(() => sortDistributionRows(distributions, plainValue))
+
+watch(muzakkiSortKey, () => { muzakkiPageNo.value = 1 })
+watch(receiptSortKey, () => { receiptsPageNo.value = 1 })
 
 const muzakkiColumns = computed(() => {
   const base = [
