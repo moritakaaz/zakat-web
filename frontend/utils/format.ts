@@ -6,6 +6,13 @@ export function formatKg(value: number): string {
   return (value || 0).toLocaleString('id-ID') + ' kg'
 }
 
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(date)
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return '-'
   const date = new Date(value)

@@ -15,8 +15,57 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+@page {
+  size: A4 landscape;
+  margin: 12mm 10mm;
+}
+
 @media print {
+  html {
+    font-size: 12px;
+  }
+
   body {
     background-color: #ffffff !important;
+  }
+
+  .app-chrome,
+  .no-print {
+    display: none !important;
+  }
+
+  .app-content {
+    padding-left: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+  }
+
+  th,
+  td {
+    padding: 4px 6px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .period-archive table th:last-child,
+  .period-archive table td:last-child {
+    display: none !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
   }
 }

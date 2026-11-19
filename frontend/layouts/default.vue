@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen bg-slate-50">
-    <div class="hidden lg:block fixed inset-y-0 left-0 z-40 border-r border-slate-200">
+    <div class="app-chrome hidden lg:block fixed inset-y-0 left-0 z-40 border-r border-slate-200">
       <AppSidebar />
     </div>
-    <div class="lg:pl-60">
-      <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+    <div class="app-content lg:pl-60">
+      <header class="app-chrome sticky top-0 z-30 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 min-w-0">
           <UButton icon="i-lucide-menu" color="neutral" variant="ghost" class="lg:hidden shrink-0" aria-label="Buka menu" @click="mobileNav = true" />
           <p class="font-semibold flex items-center gap-2 truncate">

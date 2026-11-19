@@ -4,21 +4,21 @@
     <p class="text-sm text-slate-500 mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}. Klik judul kolom pada arsip untuk mengurutkan.</p>
 
     <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+    <div class="stat-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Beras masuk" :value="formatKg(riceIn)" :hint="formatKg(riceIn)" icon="i-lucide-wheat" />
       <StatCard label="Beras tersalur" :value="formatKg(riceOut)" :hint="'Sisa ' + formatKg(riceIn - riceOut)" icon="i-lucide-wheat" />
       <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
       <StatCard label="Sisa saldo" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="i-lucide-hand-coins" />
     </div>
 
-    <UCard class="shadow-sm ring-slate-200 mt-4">
+    <UCard class="shadow-sm ring-slate-200 mt-4 print-avoid-break">
       <template #header>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="font-semibold flex items-center gap-2 text-slate-900">
             <UIcon name="i-lucide-file-text" class="size-4.5 text-emerald-700" />
             Rekap akhir
           </h2>
-          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-printer" @click="printReport">Cetak Laporan</UButton>
+          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-printer" class="no-print" @click="printReport">Cetak Laporan</UButton>
         </div>
       </template>
       <div class="mt-4 flex flex-col gap-2 text-sm max-w-xl">
@@ -35,18 +35,18 @@
       <p class="text-xs text-slate-500 mt-4">Sisa saldo dipertahankan sebagai cadangan penyaluran susulan dan santunan bulan berikutnya, dicatat di buku dan ditandatangani Kepala TPQ.</p>
     </UCard>
 
-    <UCard class="shadow-sm ring-slate-200 mt-4">
+    <UCard class="shadow-sm ring-slate-200 mt-4 print-avoid-break">
       <template #header>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="font-semibold flex items-center gap-2 text-slate-900">
             <UIcon name="i-lucide-archive" class="size-4.5 text-emerald-700" />
             Arsip periode
           </h2>
-          <UButton v-if="isBendahara" size="sm" icon="i-lucide-plus" @click="showCreate = true">Buat Periode Baru</UButton>
+          <UButton v-if="isBendahara" size="sm" icon="i-lucide-plus" class="no-print" @click="showCreate = true">Buat Periode Baru</UButton>
         </div>
       </template>
       <p v-if="periodError" class="text-sm text-red-600 mt-3">{{ periodError }}</p>
-      <div class="overflow-x-auto mt-3">
+      <div class="overflow-x-auto mt-3 period-archive">
         <UTable :data="sortedPeriods" :columns="periodColumns">
           <template #periodName-header>
             <SortButton label="Periode" column="periodName" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
@@ -56,6 +56,12 @@
           </template>
           <template #endDate-header>
             <SortButton label="Selesai" column="endDate" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
+          </template>
+          <template #startDate-cell="{ row }">
+            <span class="tnum whitespace-nowrap">{{ formatDate(row.original.startDate) }}</span>
+          </template>
+          <template #endDate-cell="{ row }">
+            <span class="tnum whitespace-nowrap">{{ formatDate(row.original.endDate) }}</span>
           </template>
           <template #status-header>
             <SortButton label="Status" column="status" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
@@ -73,7 +79,7 @@
       </div>
     </UCard>
 
-    <UCard class="shadow-sm ring-slate-200 mt-4">
+    <UCard class="shadow-sm ring-slate-200 mt-4 print-avoid-break">
       <template #header>
         <h2 class="font-semibold flex items-center gap-2 text-slate-900">
           <UIcon name="i-lucide-history" class="size-4.5 text-emerald-700" />
@@ -81,7 +87,7 @@
         </h2>
       </template>
       <p class="text-sm text-slate-500">Siapa mengubah apa dan kapan. Menampilkan 20 perubahan terakhir.</p>
-      <div class="overflow-x-auto mt-3">
+      <div class="overflow-x-auto mt-3 audit-log">
         <UTable :data="auditPage" :columns="auditColumns">
           <template #createdAt-cell="{ row }">
             <span class="tnum whitespace-nowrap">{{ formatDateTime(row.original.createdAt) }}</span>
@@ -126,7 +132,7 @@
 
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
-import { formatMoney, formatKg, formatDateTime } from '~/utils/format'
+import { formatMoney, formatKg, formatDate, formatDateTime } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
 const { receipts, distributions, summary, loadError, loadAll, loadDashboard } = useZakatData()
