@@ -15,7 +15,7 @@
       </div>
 
       <div class="overflow-x-auto">
-        <UTable :data="pageRows" :columns="columns" :on-select="(row) => openDetail(row.original)">
+        <UTable :data="pageRows" :columns="columns" :on-select="(row) => openDetail(row.original)" :ui="{ tr: 'cursor-pointer' }">
           <template #id-header>
             <SortButton label="Kode" column="id" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
           </template>
