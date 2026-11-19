@@ -52,6 +52,15 @@ async function initFromDatabase() {
     }
     store.auditLog = auditLog
     store.users = users.map((row) => ({ id: row.id, name: row.name, email: row.email, role: row.role, passwordHash: row.password }))
+    try {
+      const [activeRows] = await pool.query('SELECT id, active FROM users')
+      const activeById = new Map(activeRows.map((row) => [row.id, row.active]))
+      store.users.forEach((user) => {
+        if (activeById.has(user.id)) user.active = activeById.get(user.id) === 1 || activeById.get(user.id) === true
+      })
+    } catch (error) {
+      // Database seeded before the active column keeps working.
+    }
     store.periods = periods.map((row) => ({ id: row.id, periodName: row.period_name, startDate: row.start_date, endDate: row.end_date, status: row.status }))
     store.mustahik = mustahik.map(toMustahik)
     const muzakkiNames = new Map(muzakki.map((row) => [row.id, row.full_name]))

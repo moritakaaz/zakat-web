@@ -13,10 +13,10 @@
           </p>
         </div>
         <div class="flex items-center gap-3 text-sm shrink-0">
-          <span v-if="user" class="hidden sm:flex items-center gap-2 text-slate-700">
+          <NuxtLink v-if="user" to="/profil" class="hidden sm:flex items-center gap-2 text-slate-700 hover:text-emerald-700">
             <UIcon name="i-lucide-user" class="size-4" />
             {{ user.name }} ({{ user.role }})
-          </span>
+          </NuxtLink>
           <UButton label="Keluar" color="neutral" variant="soft" size="sm" icon="i-lucide-log-out" @click="logout" />
         </div>
       </header>

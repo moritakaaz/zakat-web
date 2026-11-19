@@ -217,6 +217,11 @@ export function useSession() {
     if (savedToken) token.value = savedToken
   }
 
+  function updateUser(patch: any) {
+    user.value = { ...(user.value || {}), ...patch }
+    if (import.meta.client) localStorage.setItem('zakat-user', JSON.stringify(user.value))
+  }
+
   function logout() {
     user.value = null
     token.value = null
@@ -236,5 +241,5 @@ export function useSession() {
     return fetch(config.public.apiBase + path, { ...options, headers })
   }
 
-  return { user, token, login, restore, logout, authFetch, apiBase: config.public.apiBase, isBendahara, isSekretaris, isKepala, canInput, canDelete, canRunRules }
+  return { user, token, login, restore, updateUser, logout, authFetch, apiBase: config.public.apiBase, isBendahara, isSekretaris, isKepala, canInput, canDelete, canRunRules }
 }

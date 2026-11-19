@@ -63,16 +63,20 @@
         <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
       </div>
       <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
+      <p v-if="example" class="text-sm text-slate-500 mt-2">Terpenuhi berarti kondisi aturan cocok dengan data mustahik ini dan ikut menentukan hasil. Tidak terpenuhi berarti kondisi aturan tidak cocok, jadi aturan itu tidak dipakai.</p>
       <div v-if="example" class="flex flex-wrap gap-2 mt-4">
         <UButton size="xs" :color="exampleFilter === 'Semua' ? 'primary' : 'neutral'" :variant="exampleFilter === 'Semua' ? 'solid' : 'soft'" @click="exampleFilter = 'Semua'">Semua ({{ example.trace.length }})</UButton>
         <UButton size="xs" color="success" :variant="exampleFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Terpenuhi'">Terpenuhi ({{ exampleFiredCount }})</UButton>
-        <UButton size="xs" color="error" :variant="exampleFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ exampleUnfiredCount }})</UButton>
+        <UButton size="xs" color="neutral" :variant="exampleFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ exampleUnfiredCount }})</UButton>
       </div>
       <ol v-if="example" class="mt-3 flex flex-col gap-2 text-sm">
-        <li v-for="step in filteredExampleTrace" :key="step.code" class="flex gap-2 items-center">
-          <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-          <UBadge :color="step.fired === true ? 'success' : step.fired === false ? 'error' : 'neutral'" variant="soft">{{ step.fired === true ? 'Terpenuhi' : step.fired === false ? 'Tidak terpenuhi' : 'Info' }}</UBadge>
-          <span>{{ step.note }}</span>
+        <li v-for="step in filteredExampleTrace" :key="step.code" class="flex flex-col gap-0.5">
+          <div class="flex gap-2 items-center">
+            <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
+            <UBadge :color="step.fired === true ? 'success' : 'neutral'" variant="soft">{{ step.fired === true ? 'Terpenuhi' : step.fired === false ? 'Tidak terpenuhi' : 'Info' }}</UBadge>
+            <span>{{ ruleText(step.code) || step.note }}</span>
+          </div>
+          <p v-if="ruleText(step.code)" class="text-slate-500 pl-14">{{ step.note }}</p>
         </li>
       </ol>
       <p v-if="example && !filteredExampleTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
@@ -125,6 +129,12 @@ const filteredExampleTrace = computed(() => {
 })
 const exampleFiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired === true).length : 0)
 const exampleUnfiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired === false).length : 0)
+
+function ruleText(code: string) {
+  const rule = rules.value.find((row: any) => row.code === code)
+  if (!rule) return ''
+  return 'Jika ' + rule.condition + ', maka ' + rule.result + '.'
+}
 
 function openEdit(rule: any) {
   editing.value = { ...rule }

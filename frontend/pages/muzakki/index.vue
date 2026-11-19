@@ -123,6 +123,11 @@
           <template #amountMoney-cell="{ row }">
             <span class="tnum">{{ row.original.amountMoney ? formatMoney(row.original.amountMoney) : '-' }}</span>
           </template>
+          <template #actions-cell="{ row }">
+            <div v-if="canInput" class="flex gap-1">
+              <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openReceiptEdit(row.original)">Ubah</UButton>
+            </div>
+          </template>
         </UTable>
       </div>
       <div class="flex justify-center mt-4">
@@ -130,7 +135,7 @@
       </div>
     </UCard>
 
-    <UModal v-model:open="showReceiptForm" title="Catat penerimaan">
+    <UModal v-model:open="showReceiptForm" :title="editingReceiptId ? 'Ubah penerimaan' : 'Catat penerimaan'">
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="Muzakki" name="muzakkiId">
@@ -200,11 +205,16 @@
           <template #amountMoney-cell="{ row }">
             <span class="tnum">{{ row.original.amountMoney ? formatMoney(row.original.amountMoney) : '-' }}</span>
           </template>
+          <template #actions-cell="{ row }">
+            <div v-if="isBendahara" class="flex gap-1">
+              <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openDistributionEdit(row.original)">Ubah</UButton>
+            </div>
+          </template>
         </UTable>
       </div>
     </UCard>
 
-    <UModal v-model:open="showDistributionForm" title="Catat penyaluran">
+    <UModal v-model:open="showDistributionForm" :title="editingDistributionId ? 'Ubah penyaluran' : 'Catat penyaluran'">
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="Mustahik" name="mustahikId">
@@ -268,6 +278,7 @@ const showDelete = ref(false)
 const showReceiptForm = ref(false)
 const receiptError = ref('')
 const receiptSaved = ref('')
+const editingReceiptId = ref('')
 const receiptForm = ref({ muzakkiId: '', zakatType: 'Infaq', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) })
 const muzakkiOptions = computed(() => muzakki.value.map((row) => ({ id: row.id, fullName: row.fullName })))
 const toDelete = ref<any>(null)
@@ -276,6 +287,7 @@ const form = ref({ fullName: '', address: '', zakatType: 'Infaq' })
 const showDistributionForm = ref(false)
 const distributionError = ref('')
 const distributionSaved = ref('')
+const editingDistributionId = ref('')
 const distributionForm = ref({ mustahikId: '', groupName: '', zakatType: 'Zakat Fitrah', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) })
 const muzakkiPageNo = ref(1)
 const receiptsPageNo = ref(1)
@@ -317,22 +329,30 @@ function totalText(row: any) {
 }
 
 const mustahikOptions = computed(() => [{ id: '', fullName: 'Kelompok penerima (tanpa mustahik)' }, ...periodMustahik.value.map((row) => ({ id: row.id, fullName: row.fullName }))])
-const receiptColumns = [
-  { accessorKey: 'date', header: 'Tanggal' },
-  { accessorKey: 'zakatType', header: 'Jenis Zakat' },
-  { accessorKey: 'name', header: 'Muzakki' },
-  { accessorKey: 'form', header: 'Bentuk' },
-  { accessorKey: 'quantityKg', header: 'Beras (kg)' },
-  { accessorKey: 'amountMoney', header: 'Nilai Uang' }
-]
-const distributionColumns = [
-  { accessorKey: 'date', header: 'Tanggal' },
-  { accessorKey: 'zakatType', header: 'Jenis Zakat' },
-  { accessorKey: 'name', header: 'Kelompok Penerima' },
-  { accessorKey: 'form', header: 'Bentuk' },
-  { accessorKey: 'quantityKg', header: 'Beras (kg)' },
-  { accessorKey: 'amountMoney', header: 'Nilai Uang' }
-]
+const receiptColumns = computed(() => {
+  const base = [
+    { accessorKey: 'date', header: 'Tanggal' },
+    { accessorKey: 'zakatType', header: 'Jenis Zakat' },
+    { accessorKey: 'name', header: 'Muzakki' },
+    { accessorKey: 'form', header: 'Bentuk' },
+    { accessorKey: 'quantityKg', header: 'Beras (kg)' },
+    { accessorKey: 'amountMoney', header: 'Nilai Uang' }
+  ]
+  if (canInput.value) base.push({ id: 'actions', header: 'Aksi' } as any)
+  return base
+})
+const distributionColumns = computed(() => {
+  const base = [
+    { accessorKey: 'date', header: 'Tanggal' },
+    { accessorKey: 'zakatType', header: 'Jenis Zakat' },
+    { accessorKey: 'name', header: 'Kelompok Penerima' },
+    { accessorKey: 'form', header: 'Bentuk' },
+    { accessorKey: 'quantityKg', header: 'Beras (kg)' },
+    { accessorKey: 'amountMoney', header: 'Nilai Uang' }
+  ]
+  if (isBendahara.value) base.push({ id: 'actions', header: 'Aksi' } as any)
+  return base
+})
 
 async function loadMuzakki() {
   try {
@@ -378,7 +398,22 @@ async function saveMuzakki() {
 }
 
 function openReceiptCreate() {
+  editingReceiptId.value = ''
   receiptForm.value = { muzakkiId: '', zakatType: 'Infaq', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) }
+  receiptError.value = ''
+  showReceiptForm.value = true
+}
+
+function openReceiptEdit(item: any) {
+  editingReceiptId.value = item.id
+  receiptForm.value = {
+    muzakkiId: item.muzakkiId || '',
+    zakatType: item.zakatType || 'Infaq',
+    form: item.form === 'Beras' ? 'Beras' : 'Uang',
+    quantityKg: item.quantityKg || 0,
+    amountMoney: item.amountMoney || 0,
+    date: item.date || new Date().toISOString().slice(0, 10)
+  }
   receiptError.value = ''
   showReceiptForm.value = true
 }
@@ -410,7 +445,9 @@ async function saveReceipt() {
     amountMoney: isRice ? 0 : receiptForm.value.amountMoney,
     date: receiptForm.value.date
   })
-  const res = await authFetch('/receipts', { method: 'POST', body })
+  const res = editingReceiptId.value
+    ? await authFetch('/receipts/' + editingReceiptId.value, { method: 'PUT', body })
+    : await authFetch('/receipts', { method: 'POST', body })
   if (!res.ok) {
     let message = 'Gagal menyimpan penerimaan. Pastikan Anda masuk sebagai Bendahara atau Sekretaris.'
     try {
@@ -423,12 +460,30 @@ async function saveReceipt() {
     return
   }
   showReceiptForm.value = false
-  receiptSaved.value = 'Penerimaan ' + receiptForm.value.zakatType + ' dari ' + selected.fullName + ' tersimpan.'
+  receiptSaved.value = editingReceiptId.value
+    ? 'Penerimaan ' + receiptForm.value.zakatType + ' dari ' + selected.fullName + ' diperbarui.'
+    : 'Penerimaan ' + receiptForm.value.zakatType + ' dari ' + selected.fullName + ' tersimpan.'
   await loadFinance(authFetch)
 }
 
 function openDistributionCreate() {
+  editingDistributionId.value = ''
   distributionForm.value = { mustahikId: '', groupName: '', zakatType: 'Zakat Fitrah', form: 'Uang', quantityKg: 0, amountMoney: 0, date: new Date().toISOString().slice(0, 10) }
+  distributionError.value = ''
+  showDistributionForm.value = true
+}
+
+function openDistributionEdit(item: any) {
+  editingDistributionId.value = item.id
+  distributionForm.value = {
+    mustahikId: item.mustahikId || '',
+    groupName: item.groupName || '',
+    zakatType: item.zakatType || 'Zakat Fitrah',
+    form: item.form || 'Uang',
+    quantityKg: item.quantityKg || 0,
+    amountMoney: item.amountMoney || 0,
+    date: item.date || new Date().toISOString().slice(0, 10)
+  }
   distributionError.value = ''
   showDistributionForm.value = true
 }
@@ -472,7 +527,9 @@ async function saveDistribution() {
     amountMoney: isRice ? 0 : distributionForm.value.amountMoney,
     date: distributionForm.value.date
   })
-  const res = await authFetch('/distributions', { method: 'POST', body })
+  const res = editingDistributionId.value
+    ? await authFetch('/distributions/' + editingDistributionId.value, { method: 'PUT', body })
+    : await authFetch('/distributions', { method: 'POST', body })
   if (!res.ok) {
     let message = 'Gagal menyimpan penyaluran. Pastikan Anda masuk sebagai Bendahara dan periode sudah disetujui Kepala TPQ.'
     try {
@@ -485,7 +542,9 @@ async function saveDistribution() {
     return
   }
   showDistributionForm.value = false
-  distributionSaved.value = 'Penyaluran ' + distributionForm.value.zakatType + ' kepada ' + (selected ? selected.fullName : groupName) + ' tersimpan.'
+  distributionSaved.value = editingDistributionId.value
+    ? 'Penyaluran ' + distributionForm.value.zakatType + ' kepada ' + (selected ? selected.fullName : groupName) + ' diperbarui.'
+    : 'Penyaluran ' + distributionForm.value.zakatType + ' kepada ' + (selected ? selected.fullName : groupName) + ' tersimpan.'
   await loadFinance(authFetch)
 }
 

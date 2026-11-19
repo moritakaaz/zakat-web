@@ -61,12 +61,14 @@ Sistem mencakup pendataan mustahik dan muzakki. Sistem mencakup pencatatan pener
 - Catat penerimaan zakat fitrah dalam bentuk beras dan uang
 - Catat penerimaan zakat mal dan infaq dalam bentuk uang
 - Setiap pencatatan menyimpan tanggal, nama muzakki, jenis zakat, jumlah, dan petugas pencatat
+- Penerimaan dapat diubah untuk membetulkan salah catat dan setiap perubahan tercatat di riwayat perubahan
 
 ### 4.5 Pencatatan Penyaluran
 
 - Catat penyaluran kepada mustahik berdasarkan hasil prioritas
 - Setiap penyaluran menyimpan tanggal, nama penerima, prioritas, bentuk penyaluran, dan jumlah
 - Sistem menghitung sisa saldo otomatis
+- Penyaluran dapat diubah untuk membetulkan salah catat selama saldo masih cukup dan setiap perubahan tercatat di riwayat perubahan
 
 ### 4.6 Proses Rule-Based
 
@@ -82,6 +84,13 @@ Sistem mencakup pendataan mustahik dan muzakki. Sistem mencakup pencatatan pener
 - Laporan dapat dicetak
 - Arsip periode lalu dapat dibuka dan dicari
 - Riwayat perubahan data menampilkan siapa mengubah apa dan kapan
+
+### 4.8 Akun dan Pengguna
+
+- Setiap pengguna dapat mengubah nama tampilan dan kata sandinya sendiri lewat halaman Profil Saya
+- Kepala TPQ dapat menambah pengguna baru, mengubah data pengguna, mereset kata sandi, dan menonaktifkan akun
+- Pengguna nonaktif tidak dapat masuk sampai diaktifkan kembali oleh Kepala TPQ
+- Kepala TPQ tidak dapat mengubah akunnya sendiri lewat halaman Pengguna
 
 ## 5 Aturan Rule-Based dan Forward Chaining
 

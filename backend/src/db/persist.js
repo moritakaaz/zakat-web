@@ -78,6 +78,29 @@ function persistRule(rule) {
   )
 }
 
+function persistUser(user) {
+  return run(
+    'INSERT INTO users (id, name, email, password, role, active) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), email = VALUES(email), password = VALUES(password), role = VALUES(role), active = VALUES(active)',
+    [user.id, user.name, user.email, user.passwordHash, user.role, user.active === false ? 0 : 1]
+  )
+}
+
+function updateReceipt(item) {
+  const id = Number(String(item.id).replace(/\D/g, '')) || 0
+  return run(
+    'UPDATE zakat_receipts SET muzakki_id = ?, zakat_type = ?, amount_rice_kg = ?, amount_money = ?, received_date = ?, recorded_by = ? WHERE id = ?',
+    [item.muzakkiId || null, item.zakatType, item.quantityKg || 0, item.amountMoney || 0, item.date || new Date().toISOString().slice(0, 10), item.recordedBy || 'Bendahara', id]
+  )
+}
+
+function updateDistribution(item) {
+  const id = Number(String(item.id).replace(/\D/g, '')) || 0
+  return run(
+    'UPDATE zakat_distributions SET mustahik_id = ?, priority = ?, distribution_type = ?, zakat_type = ?, group_name = ?, amount_rice_kg = ?, amount_money = ?, distribution_date = ?, recorded_by = ? WHERE id = ?',
+    [item.mustahikId || null, item.priority || '', item.form || item.distributionType || 'Uang', item.zakatType || '', item.groupName || '', item.quantityKg || 0, item.amountMoney || 0, item.date || new Date().toISOString().slice(0, 10), item.recordedBy || 'Bendahara', id]
+  )
+}
+
 function persistAuditLog(entry) {
   return run(
     'INSERT INTO audit_log (actor_name, actor_role, action, target, detail) VALUES (?, ?, ?, ?, ?)',
@@ -85,4 +108,4 @@ function persistAuditLog(entry) {
   )
 }
 
-module.exports = { persistMustahik, deleteMustahik, persistReceipt, persistDistribution, persistApproval, persistMuzakki, deleteMuzakki, persistPeriod, persistRule, persistAuditLog }
+module.exports = { persistMustahik, deleteMustahik, persistReceipt, updateReceipt, persistDistribution, updateDistribution, persistApproval, persistMuzakki, deleteMuzakki, persistPeriod, persistRule, persistAuditLog, persistUser }

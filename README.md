@@ -127,7 +127,7 @@ Pemilih periode ada di menu samping dan berlaku untuk dashboard, data mustahik, 
 
 ## Peran Pengguna
 
-Bendahara mempunyai akses penuh termasuk menjalankan proses rule, mengubah aturan, membuat dan menutup periode, serta menghapus data. Sekretaris membantu pendataan mustahik dan muzakki serta pencatatan penerimaan, tetapi tidak dapat menjalankan proses rule, menghapus data, atau menyetujui hasil. Kepala TPQ hanya melihat dashboard, hasil prioritas, dan laporan, serta menyetujui atau menolak hasil. Pembatasan ini ditegakkan di backend dan menu serta tombol yang tidak sesuai peran disembunyikan di frontend.
+Bendahara mempunyai akses penuh termasuk menjalankan proses rule, mengubah aturan, membuat dan menutup periode, serta menghapus data. Sekretaris membantu pendataan mustahik dan muzakki serta pencatatan penerimaan, tetapi tidak dapat menjalankan proses rule, menghapus data, atau menyetujui hasil. Kepala TPQ hanya melihat dashboard, hasil prioritas, dan laporan, serta menyetujui atau menolak hasil. Pembatasan ini ditegakkan di backend dan menu serta tombol yang tidak sesuai peran disembunyikan di frontend. Setiap pengguna dapat mengubah nama dan kata sandinya sendiri lewat Profil Saya, dan Kepala TPQ mengelola pengguna lain lewat halaman Pengguna.
 
 ## Pengaman Penyaluran
 
@@ -139,11 +139,13 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 - Dashboard untuk total muzakki, mustahik, penerimaan, penyaluran, dan sisa saldo
 - Data Mustahik untuk tabel mustahik dengan pencarian dan pagination, serta ubah dan hapus data. Judul kolom dapat diklik untuk mengurutkan tabel, klik kedua membalik urutan, dan klik ketiga mengembalikan urutan awal. Klik baris membuka Jejak Forward Chaining dengan badge Terpenuhi hijau dan Tidak terpenuhi merah serta filter Semua, Terpenuhi, dan Tidak terpenuhi
 - Tambah Mustahik untuk form data calon penerima dengan NIK asli dan peringatan duplikat
-- Muzakki dan Penerimaan untuk pencatatan penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus. Tabel muzakki, penerimaan, dan penyaluran dapat diurutkan dengan klik judul kolom
+- Muzakki dan Penerimaan untuk pencatatan dan ubah penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus. Tabel muzakki, penerimaan, dan penyaluran dapat diurutkan dengan klik judul kolom
 - Proses Rule untuk 14 aturan dan jejak Forward Chaining
 - Hasil Prioritas untuk ranking penerima. Tabel ranking dapat diurutkan dengan klik judul kolom, dan ada tombol untuk kembali ke urutan ranking
 - Laporan untuk rekap akhir dan arsip periode
 - Glosarium untuk istilah, 14 aturan dari API, arti status hasil, dan tugas tiap peran
+- Pengguna untuk tambah, ubah, nonaktifkan, dan reset kata sandi pengguna, hanya untuk Kepala TPQ
+- Profil Saya untuk ubah nama tampilan dan kata sandi sendiri
 - Menu di layar kecil tampil sebagai drawer dari kiri dengan tombol tutup di kiri atas, sejajar dengan tombol hamburger yang membukanya
 
 ## Data Acuan
@@ -169,7 +171,7 @@ Mesin rule memakai 14 aturan dari file data acuan. Aturan diperiksa berurutan da
 - NIK wajib 16 digit angka, ditulis lengkap di semua tampilan dan di data acuan. Spasi dan tanda hubung dihapus sebelum cek duplikat, dan NIK ganda pada periode yang sama ditolak saat simpan dengan pesan yang jelas.
 - Status khusus memakai pilihan tetap Janda, Lansia, Yatim, Wali Santri, dan Guru Honorer TPQ. Pekerjaan memakai pilihan tetap dari daftar pekerjaan yang umum di Warakas, dengan pilihan Lainnya untuk pekerjaan di luar daftar.
 - Mesin mencocokkan satu kata utuh dari pilihan tersebut, bukan sebagian teks. Teks seperti Bukan Janda atau Janda Tapi Kaya tidak lagi dihitung sebagai Janda, dan Mantan Guru Honorer TPQ tidak lagi dihitung sebagai guru honorer TPQ.
-- Jejak Forward Chaining menampilkan seluruh 14 aturan, termasuk ketiga pita pendapatan R01a, R01b, dan R01c serta aturan ranking R12 sebagai catatan informasi. Catatan tiap aturan menyatakan fakta sebenarnya dari data mustahik itu, misalnya Dokumen lengkap bila dokumen lengkap dan NIK tidak ganda bila NIK tidak ganda.
+- Jejak Forward Chaining menampilkan seluruh 14 aturan, termasuk ketiga pita pendapatan R01a, R01b, dan R01c serta aturan ranking R12 sebagai catatan informasi. Setiap baris jejak menampilkan syarat aturan dalam bentuk Jika maka beserta fakta dari data mustahik itu, misalnya Dokumen lengkap bila dokumen lengkap dan NIK tidak ganda bila NIK tidak ganda. Badge Terpenuhi memakai warna hijau, sedangkan badge Tidak terpenuhi memakai warna abu-abu netral supaya tidak terbaca seperti ada kesalahan, karena aturan yang tidak terpenuhi memang tidak dipakai untuk KK itu.
 - Aturan R09 tidak lagi memakai pengecualian kondisi khusus. Pendapatan lebih dari Rp 2.500.000 per bulan selalu menghasilkan Tidak Layak.
 - Form memberi peringatan bila asnaf Fisabilillah dipilih tetapi pekerjaan bukan guru honorer TPQ, bila pekerjaan tercatat tetapi pendapatan Rp 0, dan bila jumlah anak sekolah lebih dari jumlah tanggungan. Peringatan tidak menghalangi simpan, hanya meminta pengurus memeriksa lagi datanya.
 - Tabel Data Mustahik menampilkan kolom NIK lengkap, dan jejak per KK menampilkan seluruh isi form termasuk alamat, anak sekolah, dokumen, status khusus, dan asnaf. Tabel penerimaan tidak lagi menampilkan kolom Keterangan yang tidak ada datanya, dan tabel penyaluran menampilkan kolom Bentuk sesuai form. Tanggal persetujuan Kepala TPQ ditampilkan sebagai tanggal Indonesia, dan status periode ditampilkan sebagai Aktif atau Tutup.
@@ -182,6 +184,15 @@ Mesin rule memakai 14 aturan dari file data acuan. Aturan diperiksa berurutan da
 - Data mustahik dan hasil prioritas dapat diunduh sebagai CSV dari halaman Data Mustahik dan Hasil Prioritas. Berkas memakai pemisah titik koma supaya terbuka benar di Excel Indonesia, dan memakai BOM UTF-8 supaya huruf Indonesia tampil benar.
 - Setiap perubahan data dicatat di tabel audit_log beserta nama pengguna, peran, aksi, target, dan waktunya. Riwayat 20 perubahan terakhir tampil di halaman Laporan dan mencakup tambah, ubah, dan hapus mustahik dan muzakki, pencatatan penerimaan dan penyaluran, perubahan aturan, pembuatan dan penutupan periode, serta persetujuan dan penolakan hasil.
 
+## Profil, Edit Penerimaan dan Penyaluran, dan Pengguna
+
+- Setiap pengguna dapat mengubah nama tampilannya sendiri dan kata sandinya sendiri lewat halaman Profil Saya. Kata sandi baru minimal 8 karakter dan perubahan kata sandi meminta kata sandi lama terlebih dahulu.
+- Penerimaan dan penyaluran dapat diubah lewat tombol Ubah pada tabelnya bila ada salah catat. Tidak ada tombol hapus untuk keduanya, supaya catatan uang tidak hilang tanpa jejak.
+- Ubah penerimaan ditolak bila perubahan itu membuat saldo uang atau sisa beras menjadi negatif. Ubah penyaluran ditolak bila mustahik tujuan bukan Prioritas 1 sampai 3, bila periode belum disetujui Kepala TPQ, atau bila jumlahnya melebihi sisa saldo.
+- Kepala TPQ mengelola pengguna lewat halaman Pengguna. Ia dapat menambah pengguna baru, mengubah nama, email, dan peran, mereset kata sandi, serta menonaktifkan akun. Pengguna nonaktif tidak dapat masuk sampai diaktifkan kembali.
+- Kepala TPQ tidak dapat mengubah akunnya sendiri lewat halaman Pengguna, ia memakai halaman Profil Saya. Kolom active pada tabel pengguna ditambahkan lewat ALTER pada saat npm run seed, jadi database lama cukup di seed ulang tanpa hapus database.
+- Semua perubahan di atas tercatat di Riwayat perubahan, termasuk ubah profil, ubah kata sandi, ubah penerimaan, ubah penyaluran, tambah pengguna, ubah pengguna, dan reset kata sandi.
+
 ## Pengujian
 
 Jalankan seluruh pengujian backend dari folder backend dengan perintah berikut.
@@ -190,7 +201,7 @@ Jalankan seluruh pengujian backend dari folder backend dengan perintah berikut.
 npm test
 ```
 
-Pengujian mencakup mesin rule, autentikasi JWT, login dan perlindungan rute lewat API, persetujuan Kepala TPQ, dan toko data kosong bila MySQL tidak tersedia. Pengujian upgrade mencakup aturan yang dapat diubah, pembuatan dan penutupan periode, CRUD mustahik dan muzakki beserta batasan peran, duplikat NIK, pengaman penyaluran berupa persetujuan dan sisa saldo, serta dashboard per periode. Pengujian audit mencakup gerbang survei pada persetujuan dan pencatatan riwayat perubahan. Pengujian memakai data contoh kecil yang ditulis di dalam file pengujian dan tidak memakai data hard code dari kode aplikasi.
+Pengujian mencakup mesin rule, autentikasi JWT, login dan perlindungan rute lewat API, persetujuan Kepala TPQ, dan toko data kosong bila MySQL tidak tersedia. Pengujian upgrade mencakup aturan yang dapat diubah, pembuatan dan penutupan periode, CRUD mustahik dan muzakki beserta batasan peran, duplikat NIK, pengaman penyaluran berupa persetujuan dan sisa saldo, serta dashboard per periode. Pengujian audit mencakup gerbang survei pada persetujuan dan pencatatan riwayat perubahan. Pengujian akun mencakup ubah profil dan kata sandi, ubah penerimaan dan penyaluran beserta penjaga saldo dan prioritas, serta manajemen pengguna termasuk nonaktifkan akun dan reset kata sandi. Pengujian memakai data contoh kecil yang ditulis di dalam file pengujian dan tidak memakai data hard code dari kode aplikasi.
 
 Pemeriksaan tampilan frontend dijalankan dari folder frontend dengan perintah berikut.
 

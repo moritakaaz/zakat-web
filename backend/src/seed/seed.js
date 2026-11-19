@@ -29,6 +29,14 @@ async function main() {
     } catch (error) {
       if (error.code !== 'ER_DUP_FIELDNAME') throw error
     }
+    // Existing databases seeded before the active column keep
+    // working. Add the column when it is missing, ignore it when
+    // it already exists.
+    try {
+      await connection.query('ALTER TABLE users ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1')
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') throw error
+    }
     await connection.query(seed)
     console.log('Database seeded')
   } finally {

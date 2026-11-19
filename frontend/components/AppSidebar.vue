@@ -40,7 +40,9 @@ const allMenu = [
   { label: 'Proses Rule', to: '/rules', icon: 'i-lucide-scale', roles: ['bendahara'] },
   { label: 'Hasil Prioritas', to: '/results', icon: 'i-lucide-trophy', roles: ['bendahara', 'sekretaris', 'kepala'] },
   { label: 'Laporan', to: '/reports', icon: 'i-lucide-file-text', roles: ['bendahara', 'sekretaris', 'kepala'] },
-  { label: 'Glosarium', to: '/glosarium', icon: 'i-lucide-book-open', roles: ['bendahara', 'sekretaris', 'kepala'] }
+  { label: 'Glosarium', to: '/glosarium', icon: 'i-lucide-book-open', roles: ['bendahara', 'sekretaris', 'kepala'] },
+  { label: 'Pengguna', to: '/pengguna', icon: 'i-lucide-shield-check', roles: ['kepala'] },
+  { label: 'Profil Saya', to: '/profil', icon: 'i-lucide-user-round', roles: ['bendahara', 'sekretaris', 'kepala'] }
 ]
 
 const visibleMenu = computed(() => {
