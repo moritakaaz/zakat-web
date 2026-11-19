@@ -56,21 +56,29 @@ INSERT INTO zakat_receipts (muzakki_id, zakat_type, amount_rice_kg, amount_money
 (NULL, 'Infaq', 0, 850000, '2025-03-15', 'Bendahara'),
 (NULL, 'Infaq', 0, 750000, '2025-03-28', 'Bendahara');
 
-INSERT INTO rules (rule_code, condition_text, result_text, execution_order) VALUES
-('R10', 'Dokumen KTP atau KK tidak lengkap', 'Pending Verifikasi', 1),
-('R11', 'NIK atau nomor KK sama dengan data lain pada periode yang sama', 'Duplikat', 1),
-('R09', 'Pendapatan lebih dari Rp 2.500.000 per bulan dan tidak ada kondisi khusus', 'Tidak Layak', 2),
-('R01a', 'Pendapatan kurang dari Rp 1.500.000 per bulan', 'Prioritas 1', 3),
-('R01b', 'Pendapatan Rp 1.500.000 sampai Rp 2.000.000 per bulan', 'Prioritas 2', 3),
-('R01c', 'Pendapatan Rp 2.000.001 sampai Rp 2.500.000 per bulan', 'Prioritas 3', 3),
-('R02', 'Pendapatan per kapita kurang dari atau sama dengan Rp 300.000', 'Naik ke Prioritas 1', 4),
-('R03', 'Jumlah tanggungan 4 jiwa atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', 'Prioritas ditegaskan dan dicatat tanggungan berat', 4),
-('R04', 'Pekerjaan guru honorer TPQ dengan honor Rp 300.000 sampai Rp 600.000 per bulan', 'Asnaf Fisabilillah dan Prioritas 1', 4),
-('R05', 'Status wali santri dan pendapatan kurang dari Rp 2.500.000', 'Layak dipertimbangkan dan dievaluasi lanjut', 4),
-('R06', 'Status janda atau lansia atau yatim dan pendapatan kurang dari Rp 2.000.000', 'Prioritas ditegaskan dan berhak santunan infaq', 5),
-('R07', 'Kondisi rumah kontrak atau menumpang', 'Dicatat kerentanan dan dipakai sebagai penentu seri', 5),
-('R08', 'Jumlah anak sekolah 3 atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', 'Dicatat beban pendidikan tinggi', 5),
-('R12', 'Total dana tersedia kurang dari kebutuhan semua mustahik layak', 'Salurkan berurutan Prioritas 1 lalu Prioritas 2 lalu Prioritas 3', 6);
+INSERT INTO rules (rule_code, condition_text, result_text, execution_order, is_active, thresholds, source) VALUES
+('R10', 'Dokumen KTP atau KK tidak lengkap', 'Pending Verifikasi', 1, 1, '{}', 'Wawancara Q12'),
+('R11', 'NIK atau nomor KK sama dengan data lain pada periode yang sama', 'Duplikat', 1, 1, '{}', 'Wawancara Q15'),
+('R09', 'Pendapatan lebih dari Rp 2.500.000 per bulan dan tidak ada kondisi khusus', 'Tidak Layak', 2, 1, '{"incomeLimit":2500000}', 'Wawancara Q2'),
+('R01a', 'Pendapatan kurang dari Rp 1.500.000 per bulan', 'Prioritas 1', 3, 1, '{"incomeLimit":1500000}', 'Wawancara Q2'),
+('R01b', 'Pendapatan Rp 1.500.000 sampai Rp 2.000.000 per bulan', 'Prioritas 2', 3, 1, '{"incomeMin":1500000,"incomeLimit":2000000}', 'Wawancara Q2'),
+('R01c', 'Pendapatan Rp 2.000.001 sampai Rp 2.500.000 per bulan', 'Prioritas 3', 3, 1, '{"incomeMin":2000001,"incomeLimit":2500000}', 'Wawancara Q2'),
+('R02', 'Pendapatan per kapita kurang dari atau sama dengan Rp 300.000', 'Naik ke Prioritas 1', 4, 1, '{"perCapitaLimit":300000}', 'Wawancara Q2 dan Q3'),
+('R03', 'Jumlah tanggungan 4 jiwa atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', 'Prioritas ditegaskan dan dicatat tanggungan berat', 4, 1, '{"dependentsMin":4,"incomeLimit":2000000}', 'Wawancara Q3'),
+('R04', 'Pekerjaan guru honorer TPQ dengan honor Rp 300.000 sampai Rp 600.000 per bulan', 'Asnaf Fisabilillah dan Prioritas 1', 4, 1, '{"honorMin":300000,"honorMax":600000}', 'Wawancara Q4'),
+('R05', 'Status wali santri dan pendapatan kurang dari Rp 2.500.000', 'Layak dipertimbangkan dan dievaluasi lanjut', 4, 1, '{"incomeLimit":2500000}', 'Wawancara Q4'),
+('R06', 'Status janda atau lansia atau yatim dan pendapatan kurang dari Rp 2.000.000', 'Prioritas ditegaskan dan berhak santunan infaq', 5, 1, '{"incomeLimit":2000000}', 'Wawancara Q1 dan Q10'),
+('R07', 'Kondisi rumah kontrak atau menumpang', 'Dicatat kerentanan dan dipakai sebagai penentu seri', 5, 1, '{}', 'Wawancara Q10'),
+('R08', 'Jumlah anak sekolah 3 atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', 'Dicatat beban pendidikan tinggi', 5, 1, '{"schoolMin":3,"incomeLimit":2000000}', 'Wawancara Q3 dan Q10'),
+('R12', 'Total dana tersedia kurang dari kebutuhan semua mustahik layak', 'Salurkan berurutan Prioritas 1 lalu Prioritas 2 lalu Prioritas 3', 6, 1, '{}', 'Wawancara Q9');
+
+INSERT INTO muzakki (id, full_name, address, zakat_type, amount, period_id) VALUES
+('MZ01', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 2500000, 1),
+('MZ02', 'Keluarga H. Mahmud', 'Warakas, Tanjung Priok', 'Zakat Mal', 1500000, 1),
+('MZ03', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Mal', 1000000, 1),
+('MZ04', 'Hamba Allah', 'Warakas, Tanjung Priok', 'Zakat Fitrah', 250000, 1),
+('MZ05', 'Donatur TPQ', 'Warakas, Tanjung Priok', 'Infaq', 750000, 1),
+('MZ06', 'Infaq Jumat dan Kotak Amal TPQ', 'TPQ Al Fawwaz', 'Infaq', 850000, 1);
 
 INSERT INTO approvals (period_id, status, approver_id, approver_name, note, decided_at) VALUES
 (1, 'approved', 'U03', 'Kepala TPQ', 'Hasil Ramadan 1446 H disetujui setelah verifikasi lapangan', '2025-03-27 10:00:00'),

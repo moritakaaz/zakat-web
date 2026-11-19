@@ -2,66 +2,20 @@
   <div>
     <h1 class="text-xl font-bold">Tambah Mustahik</h1>
     <p class="text-sm text-muted mt-1">Isi data calon penerima. Hasil prioritas dihitung otomatis setelah data disimpan.</p>
-
-    <form class="bg-white border border-line rounded-lg p-4 mt-6 flex flex-col gap-4 max-w-2xl" @submit.prevent="submit">
-      <div class="flex flex-col gap-1">
-        <label for="fullName" class="text-sm font-semibold">Nama kepala keluarga</label>
-        <InputText id="fullName" v-model="form.fullName" class="w-full" />
-      </div>
-      <div class="flex flex-col gap-1">
-        <label for="address" class="text-sm font-semibold">Alamat</label>
-        <InputText id="address" v-model="form.address" class="w-full" />
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1">
-          <label for="occupation" class="text-sm font-semibold">Pekerjaan</label>
-          <InputText id="occupation" v-model="form.occupation" class="w-full" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="monthlyIncome" class="text-sm font-semibold">Pendapatan per bulan (Rp)</label>
-          <InputNumber id="monthlyIncome" v-model="form.monthlyIncome" class="w-full" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1">
-          <label for="dependents" class="text-sm font-semibold">Jumlah tanggungan (jiwa)</label>
-          <InputNumber id="dependents" v-model="form.dependents" class="w-full" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="schoolChildren" class="text-sm font-semibold">Jumlah anak sekolah</label>
-          <InputNumber id="schoolChildren" v-model="form.schoolChildren" class="w-full" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1">
-          <label for="houseCondition" class="text-sm font-semibold">Kondisi rumah</label>
-          <Select id="houseCondition" v-model="form.houseCondition" :options="['Milik Sendiri', 'Kontrak', 'Menumpang']" class="w-full" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="documentStatus" class="text-sm font-semibold">Dokumen</label>
-          <Select id="documentStatus" v-model="form.documentStatus" :options="['Lengkap', 'KTP saja']" class="w-full" />
-        </div>
-      </div>
-      <div class="flex flex-col gap-1">
-        <label for="specialStatus" class="text-sm font-semibold">Status khusus</label>
-        <InputText id="specialStatus" v-model="form.specialStatus" placeholder="Contoh: Wali Santri, Janda, Guru Honorer TPQ" class="w-full" />
-      </div>
-      <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
-      <Message v-if="saved" severity="success" :closable="false">Data tersimpan dengan hasil {{ saved }}.</Message>
-      <div class="flex gap-2">
-        <Button type="submit" label="Simpan Mustahik" />
-        <Button label="Kembali" severity="secondary" @click="navigateTo('/mustahik')" />
-      </div>
-    </form>
+    <MustahikForm :initial="initial" :duplicate-warning="duplicateWarning" :error="error" :saved="saved" submit-label="Simpan Mustahik" @submit="submit" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { useZakatData } from '~/composables/useZakat'
+import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
 
 const { mustahik, addMustahik } = useZakatData()
-const form = ref({
+const { authFetch } = useSession()
+const { selectedPeriodId } = usePeriod()
+const { rules, loadRules } = useRules()
+
+const initial = {
   fullName: '',
   address: '',
   occupation: '',
@@ -73,20 +27,36 @@ const form = ref({
   asnaf: '-',
   documentStatus: 'Lengkap',
   nik: ''
-})
+}
 const error = ref('')
 const saved = ref('')
+const duplicateWarning = ref('')
 
-function submit() {
+onMounted(() => loadRules(authFetch))
+
+function submit(form: any) {
   error.value = ''
   saved.value = ''
-  if (!form.value.fullName || !form.value.address) {
+  duplicateWarning.value = ''
+  if (!form.fullName || !form.address) {
     error.value = 'Nama kepala keluarga dan alamat wajib diisi.'
     return
   }
-  const id = addMustahik({ ...form.value, nik: '3172••••••' + String(mustahik.value.length + 1).padStart(4, '0') })
-  const item = mustahik.value.find((row) => row.id === id)
-  const niks = mustahik.value.map((row) => row.nik)
-  saved.value = evaluateMustahik(item, niks).result
+  if (!form.nik || String(form.nik).replace(/\D/g, '').length !== 16) {
+    error.value = 'NIK wajib diisi 16 digit angka.'
+    return
+  }
+  const cleanNik = String(form.nik).replace(/\D/g, '')
+  const duplicate = mustahik.value.some((row: any) => row.nik === cleanNik && Number(row.periodId || 1) === selectedPeriodId.value)
+  if (duplicate) {
+    duplicateWarning.value = 'NIK ini sudah tercatat pada periode yang sama. Data tidak disimpan.'
+    error.value = 'NIK sudah tercatat pada periode yang sama.'
+    return
+  }
+  const id = addMustahik({ ...form, nik: cleanNik, periodId: selectedPeriodId.value })
+  authFetch('/mustahik', { method: 'POST', body: JSON.stringify({ ...form, nik: cleanNik, periodId: selectedPeriodId.value }) }).catch(() => {})
+  const item = mustahik.value.find((row: any) => row.id === id)
+  const niks = mustahik.value.map((row: any) => row.nik)
+  saved.value = evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined).result
 }
 </script>

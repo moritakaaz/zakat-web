@@ -49,4 +49,33 @@ function persistApproval(approval) {
   )
 }
 
-module.exports = { persistMustahik, deleteMustahik, persistReceipt, persistDistribution, persistApproval }
+function persistMuzakki(item) {
+  return run(
+    'INSERT INTO muzakki (id, full_name, address, zakat_type, amount, period_id) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), address = VALUES(address), zakat_type = VALUES(zakat_type), amount = VALUES(amount), period_id = VALUES(period_id)',
+    [item.id, item.fullName, item.address || '', item.zakatType || '', item.amount || 0, item.periodId || 1]
+  )
+}
+
+function deleteMuzakki(id) {
+  return run('DELETE FROM muzakki WHERE id = ?', [id])
+}
+
+function persistPeriod(item) {
+  return run(
+    'INSERT INTO periods (id, period_name, start_date, end_date, status) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE period_name = VALUES(period_name), start_date = VALUES(start_date), end_date = VALUES(end_date), status = VALUES(status)',
+    [item.id, item.periodName, item.startDate, item.endDate, item.status || 'active']
+  )
+}
+
+function persistRule(rule) {
+  const thresholds = {}
+  for (const key of ['incomeMin', 'incomeLimit', 'perCapitaLimit', 'dependentsMin', 'honorMin', 'honorMax', 'schoolMin']) {
+    if (typeof rule[key] === 'number') thresholds[key] = rule[key]
+  }
+  return run(
+    'INSERT INTO rules (rule_code, condition_text, result_text, execution_order, is_active, thresholds, source) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE condition_text = VALUES(condition_text), result_text = VALUES(result_text), execution_order = VALUES(execution_order), is_active = VALUES(is_active), thresholds = VALUES(thresholds), source = VALUES(source)',
+    [rule.code, rule.condition, rule.result, rule.order, rule.isActive ? 1 : 0, JSON.stringify(thresholds), rule.source || '']
+  )
+}
+
+module.exports = { persistMustahik, deleteMustahik, persistReceipt, persistDistribution, persistApproval, persistMuzakki, deleteMuzakki, persistPeriod, persistRule }

@@ -15,15 +15,19 @@ app.get('/health', async (req, res) => {
 })
 
 app.get('/api/dashboard', requireAuth, (req, res) => {
-  const moneyIn = store.receipts.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
-  const moneyOut = store.distributions.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
-  const riceIn = store.receipts.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
-  const riceOut = store.distributions.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
-  const summary = evaluateAll().summary
+  const periodId = req.query.periodId ? Number(req.query.periodId) : null
+  const mustahik = periodId ? store.mustahik.filter((row) => Number(row.periodId || 1) === periodId) : store.mustahik
+  const receipts = periodId ? store.receipts.filter((row) => Number(row.periodId || 1) === periodId) : store.receipts
+  const distributions = periodId ? store.distributions.filter((row) => Number(row.periodId || 1) === periodId) : store.distributions
+  const moneyIn = receipts.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+  const moneyOut = distributions.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+  const riceIn = receipts.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
+  const riceOut = distributions.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
+  const summary = evaluateAll(periodId).summary
   res.json({
     data: {
-      totalMustahik: store.mustahik.length,
-      totalMuzakki: store.receipts.length,
+      totalMustahik: mustahik.length,
+      totalMuzakki: receipts.length,
       moneyIn,
       moneyOut,
       balance: moneyIn - moneyOut,

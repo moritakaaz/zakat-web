@@ -42,12 +42,17 @@ function requireAuth(req, res, next) {
 }
 
 function requireRole(role) {
+  return requireRoles(role)
+}
+
+function requireRoles() {
+  const allowed = Array.from(arguments)
   return (req, res, next) => {
-    if (!req.user || req.user.role !== role) {
+    if (!req.user || !allowed.includes(req.user.role)) {
       return res.status(403).json({ error: 'Peran tidak diizinkan untuk aksi ini' })
     }
     return next()
   }
 }
 
-module.exports = { hashPassword, verifyPassword, signToken, verifyToken, requireAuth, requireRole }
+module.exports = { hashPassword, verifyPassword, signToken, verifyToken, requireAuth, requireRole, requireRoles }

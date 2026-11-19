@@ -1,5 +1,5 @@
 // Seed data shared by the frontend when the backend is not reachable.
-export interface Mustahik { id: string, fullName: string, nik: string, address: string, occupation: string, monthlyIncome: number, dependents: number, schoolChildren: number, houseCondition: string, specialStatus: string, asnaf: string, documentStatus: string, expectedResult: string }
+export interface Mustahik { id: string, fullName: string, nik: string, address: string, occupation: string, monthlyIncome: number, dependents: number, schoolChildren: number, houseCondition: string, specialStatus: string, asnaf: string, documentStatus: string, expectedResult: string, periodId?: number }
 
 export const mustahikSeed: Mustahik[] = [
   {

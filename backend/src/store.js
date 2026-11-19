@@ -1,5 +1,7 @@
 const mustahikSeed = require('./data/mustahik')
+const muzakkiSeed = require('./data/muzakki')
 const { receipts, distributions } = require('./data/finance')
+const defaultRules = require('./data/rules')
 const { evaluateMustahik, rankResults, summarize } = require('./engine/ruleEngine')
 
 // In-memory store seeded from the reference data.
@@ -11,10 +13,11 @@ const { evaluateMustahik, rankResults, summarize } = require('./engine/ruleEngin
 const store = {
   dbMode: 'memory',
   dbStatus: { connected: false, reason: 'Database not configured' },
-  mustahik: [...mustahikSeed],
-  muzakki: [],
-  receipts: [...receipts],
-  distributions: [...distributions],
+  mustahik: mustahikSeed.map((item) => ({ periodId: 1, ...item })),
+  muzakki: [...muzakkiSeed],
+  receipts: receipts.map((item) => ({ periodId: 1, ...item })),
+  distributions: distributions.map((item) => ({ periodId: 1, ...item })),
+  rules: defaultRules.map((item) => ({ ...item })),
   users: [
     { id: 'U01', name: 'Bendahara TPQ', email: 'bendahara@alfawwaz.or.id', role: 'bendahara', passwordHash: '$2a$10$tYpj8l0Kv.OL1qfrWUDBHe/qGrhDPOWMWyTSnr65nXKoh3LdAXa.a' },
     { id: 'U02', name: 'Sekretaris TPQ', email: 'sekretaris@alfawwaz.or.id', role: 'sekretaris', passwordHash: '$2a$10$9W3szvNAu8Lkmi2fv35g6.o1k21Rmy4nO9jizWog/ZyB6GbFWZh3C' },
@@ -30,9 +33,10 @@ const store = {
   ]
 }
 
-function evaluateAll() {
-  const niks = store.mustahik.map((item) => item.nik)
-  const evaluations = store.mustahik.map((item) => evaluateMustahik(item, niks))
+function evaluateAll(periodId) {
+  const list = periodId ? store.mustahik.filter((item) => Number(item.periodId || 1) === Number(periodId)) : store.mustahik
+  const niks = list.map((item) => item.nik)
+  const evaluations = list.map((item) => evaluateMustahik(item, niks, store.rules))
   return { evaluations: rankResults(evaluations), summary: summarize(evaluations) }
 }
 

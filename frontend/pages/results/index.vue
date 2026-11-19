@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold">Hasil Prioritas</h1>
-    <p class="text-sm text-muted mt-1">Ranking setelah Forward Chaining. Urutan memakai prioritas, lalu pendapatan per kapita terendah.</p>
+    <p class="text-sm text-muted mt-1">Ranking setelah Forward Chaining periode {{ periodName }}. Urutan memakai prioritas, lalu pendapatan per kapita terendah.</p>
 
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
       <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" />
@@ -10,8 +10,11 @@
     <div class="bg-white border border-line rounded-lg p-4 mt-4">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="font-semibold">Persetujuan Kepala TPQ</h2>
-          <p class="text-sm text-muted">Hasil Ramadan 1446 H berlaku setelah disetujui Kepala TPQ.</p>
+          <h2 class="font-semibold flex items-center gap-2">
+            <Icon name="lucide:badge-check" size="18" />
+            Persetujuan Kepala TPQ
+          </h2>
+          <p class="text-sm text-muted">Hasil {{ periodName }} berlaku setelah disetujui Kepala TPQ.</p>
         </div>
         <span class="text-sm font-semibold">{{ approvalLabel }}</span>
       </div>
@@ -63,11 +66,13 @@
 </template>
 
 <script setup lang="ts">
-import { useZakatData, useSession } from '~/composables/useZakat'
+import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney } from '~/utils/format'
 
 const { evaluations, summary } = useZakatData()
 const { user, authFetch } = useSession()
+const { periods, selectedPeriodId } = usePeriod()
+const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 
 const approval = ref({ periodId: 1, status: 'pending', approverId: null, approverName: null, note: '', decidedAt: null })
 const approvalNote = ref('')
@@ -81,7 +86,7 @@ const isKepala = computed(() => user.value?.role === 'kepala')
 
 async function loadApproval() {
   try {
-    const res = await authFetch('/approvals/1')
+    const res = await authFetch('/approvals/' + selectedPeriodId.value)
     if (!res.ok) return
     const body = await res.json()
     approval.value = body.data
@@ -92,7 +97,7 @@ async function loadApproval() {
 
 async function decide(action: string) {
   approvalError.value = ''
-  const res = await authFetch('/approvals/1/' + action, {
+  const res = await authFetch('/approvals/' + selectedPeriodId.value + '/' + action, {
     method: 'POST',
     body: JSON.stringify({ note: approvalNote.value })
   })
@@ -107,7 +112,7 @@ async function decide(action: string) {
 onMounted(loadApproval)
 
 function download() {
-  const lines = ['Hasil Prioritas Mustahik Ramadan 1446 H', '']
+  const lines = ['Hasil Prioritas Mustahik ' + periodName.value, '']
   evaluations.value.forEach((item, index) => {
     lines.push((index + 1) + '. ' + item.fullName + ' - ' + item.result + ' - ' + item.firedRules.join(', '))
   })

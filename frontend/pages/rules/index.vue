@@ -6,23 +6,82 @@
     <div class="bg-white border border-line rounded-lg p-4 mt-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="font-semibold">Basis pengetahuan</h2>
-          <p class="text-sm text-muted">14 aturan dari PRD bagian 5 dan file data acuan.</p>
+          <h2 class="font-semibold flex items-center gap-2">
+            <Icon name="lucide:scale" size="18" />
+            Basis pengetahuan
+          </h2>
+          <p class="text-sm text-muted">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
         </div>
-        <Button label="Jalankan Forward Chaining" @click="run" />
+        <Button v-if="canRunRules" label="Jalankan Forward Chaining" @click="run" />
       </div>
+      <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
+      <p v-if="saveMessage" class="text-sm text-green-700 mt-3">{{ saveMessage }}</p>
       <DataTable :value="rules" size="small" class="mt-4">
         <Column field="code" header="Kode" />
         <Column field="condition" header="Kondisi IF" />
         <Column field="result" header="Kesimpulan THEN" />
-        <Column field="source" header="Sumber" />
+        <Column field="order" header="Urutan" />
+        <Column header="Ambang">
+          <template #body="slotProps">
+            <span class="tnum text-sm">{{ thresholdText(slotProps.data) }}</span>
+          </template>
+        </Column>
+        <Column header="Aktif">
+          <template #body="slotProps">
+            <span class="text-sm">{{ slotProps.data.isActive ? 'Ya' : 'Tidak' }}</span>
+          </template>
+        </Column>
+        <Column v-if="canRunRules" header="Aksi">
+          <template #body="slotProps">
+            <Button severity="secondary" size="small" @click="openEdit(slotProps.data)">
+              <template #icon>
+                <Icon name="lucide:pencil" size="14" />
+              </template>
+              Ubah
+            </Button>
+          </template>
+        </Column>
       </DataTable>
+      <p v-if="!canRunRules" class="text-xs text-muted mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
     </div>
 
+    <Dialog v-model:visible="showEdit" modal header="Ubah aturan" class="w-full max-w-xl">
+      <div v-if="editing" class="flex flex-col gap-4">
+        <p class="font-semibold">{{ editing.code }} - {{ editing.condition }}</p>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-semibold">Kondisi IF</label>
+          <InputText v-model="editing.condition" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-semibold">Kesimpulan THEN</label>
+          <InputText v-model="editing.result" class="w-full" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-semibold">Urutan</label>
+            <InputNumber v-model="editing.order" class="w-full" />
+          </div>
+          <div class="flex items-center gap-2 mt-6">
+            <Checkbox v-model="editing.isActive" :binary="true" input-id="ruleActive" />
+            <label for="ruleActive" class="text-sm">Aturan aktif</label>
+          </div>
+        </div>
+        <div v-for="field in numericFields" :key="field.key" class="flex flex-col gap-1">
+          <label class="text-sm font-semibold">{{ field.label }}</label>
+          <InputNumber v-model="editing[field.key]" class="w-full" />
+        </div>
+        <p v-if="editError" class="text-sm text-red-600">{{ editError }}</p>
+        <div class="flex gap-2">
+          <Button label="Simpan Aturan" @click="saveEdit" />
+          <Button label="Batal" severity="secondary" @click="showEdit = false" />
+        </div>
+      </div>
+    </Dialog>
+
     <div v-if="ran" class="bg-white border border-line rounded-lg p-4 mt-4">
-      <h2 class="font-semibold">Hasil proses untuk 30 KK</h2>
+      <h2 class="font-semibold">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
       <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
-        <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" />
+        <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" />
       </div>
       <p class="text-sm text-muted mt-4">Contoh jejak untuk Ahmad Hidayat ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
       <ol class="mt-4 flex flex-col gap-2 text-sm">
@@ -37,36 +96,87 @@
 </template>
 
 <script setup lang="ts">
-import { useZakatData } from '~/composables/useZakat'
+import { useZakatData, useSession, useRules, usePeriod } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
 
-const { mustahik, summary } = useZakatData()
+const { mustahik, periodMustahik, summary } = useZakatData()
+const { authFetch, canRunRules } = useSession()
+const { rules, loadRules } = useRules()
+const { selectedPeriodId } = usePeriod()
 const ran = ref(false)
+const runSummary = ref<Record<string, number>>({})
+const loadError = ref('')
+const saveMessage = ref('')
+const showEdit = ref(false)
+const editing = ref<any>(null)
+const editError = ref('')
 
-const rules = [
-  { code: 'R10', condition: 'Dokumen KTP atau KK tidak lengkap', result: 'Pending Verifikasi', source: 'Wawancara Q12' },
-  { code: 'R11', condition: 'NIK atau nomor KK sama dengan data lain pada periode yang sama', result: 'Duplikat', source: 'Wawancara Q15' },
-  { code: 'R09', condition: 'Pendapatan lebih dari Rp 2.500.000 per bulan dan tidak ada kondisi khusus', result: 'Tidak Layak', source: 'Wawancara Q2' },
-  { code: 'R01a', condition: 'Pendapatan kurang dari Rp 1.500.000 per bulan', result: 'Prioritas 1', source: 'Wawancara Q2' },
-  { code: 'R01b', condition: 'Pendapatan Rp 1.500.000 sampai Rp 2.000.000 per bulan', result: 'Prioritas 2', source: 'Wawancara Q2' },
-  { code: 'R01c', condition: 'Pendapatan Rp 2.000.001 sampai Rp 2.500.000 per bulan', result: 'Prioritas 3', source: 'Wawancara Q2' },
-  { code: 'R02', condition: 'Pendapatan per kapita kurang dari atau sama dengan Rp 300.000', result: 'Naik ke Prioritas 1', source: 'Wawancara Q2 dan Q3' },
-  { code: 'R03', condition: 'Jumlah tanggungan 4 jiwa atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', result: 'Prioritas ditegaskan', source: 'Wawancara Q3' },
-  { code: 'R04', condition: 'Guru honorer TPQ dengan honor Rp 300.000 sampai Rp 600.000 per bulan', result: 'Fisabilillah dan Prioritas 1', source: 'Wawancara Q4' },
-  { code: 'R05', condition: 'Status wali santri dan pendapatan kurang dari Rp 2.500.000', result: 'Layak dipertimbangkan', source: 'Wawancara Q4' },
-  { code: 'R06', condition: 'Status janda atau lansia atau yatim dan pendapatan kurang dari Rp 2.000.000', result: 'Prioritas ditegaskan', source: 'Wawancara Q1 dan Q10' },
-  { code: 'R07', condition: 'Kondisi rumah kontrak atau menumpang', result: 'Penentu seri saat ranking', source: 'Wawancara Q10' },
-  { code: 'R08', condition: 'Jumlah anak sekolah 3 atau lebih dan pendapatan kurang dari atau sama dengan Rp 2.000.000', result: 'Beban pendidikan tinggi', source: 'Wawancara Q3 dan Q10' },
-  { code: 'R12', condition: 'Total dana tersedia kurang dari kebutuhan semua mustahik layak', result: 'Salurkan Prioritas 1 lalu 2 lalu 3', source: 'Wawancara Q9' }
+const numericFields = [
+  { key: 'incomeMin', label: 'Batas bawah pendapatan (Rp)' },
+  { key: 'incomeLimit', label: 'Batas atas pendapatan (Rp)' },
+  { key: 'perCapitaLimit', label: 'Batas pendapatan per kapita (Rp)' },
+  { key: 'dependentsMin', label: 'Tanggungan minimum (jiwa)' },
+  { key: 'honorMin', label: 'Honor minimum (Rp)' },
+  { key: 'honorMax', label: 'Honor maksimum (Rp)' },
+  { key: 'schoolMin', label: 'Anak sekolah minimum' }
 ]
 
 const example = computed(() => {
-  const item = mustahik.value.find((row) => row.id === 'KK08')
-  const niks = mustahik.value.map((row) => row.nik)
-  return evaluateMustahik(item, niks)
+  const item = mustahik.value.find((row: any) => row.id === 'KK08')
+  const niks = mustahik.value.map((row: any) => row.nik)
+  return evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
 })
 
-function run() {
+function thresholdText(rule: any): string {
+  const parts: string[] = []
+  if (typeof rule.incomeMin === 'number') parts.push('Min Rp ' + rule.incomeMin.toLocaleString('id-ID'))
+  if (typeof rule.incomeLimit === 'number') parts.push('Maks Rp ' + rule.incomeLimit.toLocaleString('id-ID'))
+  if (typeof rule.perCapitaLimit === 'number') parts.push('Per kapita Rp ' + rule.perCapitaLimit.toLocaleString('id-ID'))
+  if (typeof rule.dependentsMin === 'number') parts.push('Tanggungan ' + rule.dependentsMin)
+  if (typeof rule.honorMin === 'number') parts.push('Honor Rp ' + rule.honorMin.toLocaleString('id-ID'))
+  if (typeof rule.honorMax === 'number') parts.push('sampai Rp ' + rule.honorMax.toLocaleString('id-ID'))
+  if (typeof rule.schoolMin === 'number') parts.push('Sekolah ' + rule.schoolMin)
+  return parts.join(', ') || '-'
+}
+
+function openEdit(rule: any) {
+  editing.value = { ...rule }
+  editError.value = ''
+  saveMessage.value = ''
+  showEdit.value = true
+}
+
+async function saveEdit() {
+  if (!editing.value) return
+  editError.value = ''
+  const body: any = { condition: editing.value.condition, result: editing.value.result, order: editing.value.order, isActive: editing.value.isActive }
+  for (const field of numericFields) {
+    if (typeof editing.value[field.key] === 'number') body[field.key] = editing.value[field.key]
+  }
+  const res = await authFetch('/rules/' + editing.value.code, { method: 'PUT', body: JSON.stringify(body) })
+  if (!res.ok) {
+    editError.value = 'Gagal menyimpan aturan. Pastikan Anda masuk sebagai Bendahara.'
+    return
+  }
+  await loadRules(authFetch)
+  saveMessage.value = 'Aturan ' + editing.value.code + ' tersimpan. Jalankan ulang proses untuk melihat hasil baru.'
+  showEdit.value = false
+}
+
+async function run() {
+  ran.value = false
+  const res = await authFetch('/rules/evaluate', { method: 'POST', body: JSON.stringify({ periodId: selectedPeriodId.value }) })
+  if (res.ok) {
+    const body = await res.json()
+    runSummary.value = body.summary
+  } else {
+    runSummary.value = summary.value
+  }
   ran.value = true
 }
+
+onMounted(async () => {
+  await loadRules(authFetch)
+  if (!rules.value.length) loadError.value = 'Aturan dari server tidak dapat dimuat, dipakai ambang acuan.'
+})
 </script>

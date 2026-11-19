@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS rules (
   condition_text VARCHAR(255) NOT NULL,
   result_text VARCHAR(255) NOT NULL,
   execution_order INT NOT NULL,
-  is_active TINYINT(1) NOT NULL DEFAULT 1
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  thresholds TEXT,
+  source VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS approvals (

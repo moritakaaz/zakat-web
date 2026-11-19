@@ -1,5 +1,6 @@
 const express = require('express')
 const { store } = require('../store')
+const { requireRoles } = require('../auth/auth')
 const { persistReceipt } = require('../db/persist')
 
 const router = express.Router()
@@ -10,8 +11,8 @@ router.get('/', (req, res) => {
   res.json({ data: store.receipts, totalMoney: moneyIn, totalRiceKg: riceIn })
 })
 
-router.post('/', (req, res) => {
-  const item = { id: 'RC' + String(store.receipts.length + 1).padStart(2, '0'), ...req.body }
+router.post('/', requireRoles('bendahara', 'sekretaris'), (req, res) => {
+  const item = { periodId: 1, id: 'RC' + String(store.receipts.length + 1).padStart(2, '0'), ...req.body, periodId: Number((req.body || {}).periodId || 1) }
   store.receipts.push(item)
   persistReceipt(item)
   res.status(201).json({ data: item })

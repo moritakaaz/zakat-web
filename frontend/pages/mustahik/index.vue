@@ -3,9 +3,9 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold">Data Mustahik</h1>
-        <p class="text-sm text-muted mt-1">30 KK pada periode Ramadan 1446 H. Klik baris untuk melihat jejak rule.</p>
+        <p class="text-sm text-muted mt-1">{{ periodMustahik.length }} KK pada periode {{ periodName }}. Klik baris untuk melihat jejak rule.</p>
       </div>
-      <Button label="Tambah Mustahik" @click="navigateTo('/mustahik/new')" />
+      <Button v-if="canInput" label="Tambah Mustahik" @click="navigateTo('/mustahik/new')" />
     </div>
 
     <div class="bg-white border border-line rounded-lg p-4 mt-6">
@@ -30,10 +30,37 @@
             <PriorityTag :value="slotProps.data.result" />
           </template>
         </Column>
+        <Column v-if="canInput" header="Aksi">
+          <template #body="slotProps">
+            <div class="flex gap-1">
+              <Button severity="secondary" size="small" @click.stop="navigateTo('/mustahik/' + slotProps.data.id)">
+                <template #icon>
+                  <Icon name="lucide:pencil" size="14" />
+                </template>
+                Ubah
+              </Button>
+              <Button v-if="canDelete" severity="danger" size="small" @click.stop="askDelete(slotProps.data)">
+                <template #icon>
+                  <Icon name="lucide:trash-2" size="14" />
+                </template>
+                Hapus
+              </Button>
+            </div>
+          </template>
+        </Column>
       </DataTable>
 
       <Message v-if="filtered.length === 0" severity="info" class="mt-4">Tidak ada mustahik yang cocok dengan pencarian.</Message>
+      <Message v-if="deleteError" severity="error" class="mt-4" :closable="false">{{ deleteError }}</Message>
     </div>
+
+    <Dialog v-model:visible="showDelete" modal header="Hapus mustahik" class="w-full max-w-md">
+      <p class="text-sm">Hapus {{ toDelete?.fullName }} ({{ toDelete?.id }}) dari data periode ini? Tindakan ini tidak dapat dibatalkan.</p>
+      <div class="flex gap-2 mt-4">
+        <Button label="Hapus" severity="danger" @click="confirmDelete" />
+        <Button label="Batal" severity="secondary" @click="showDelete = false" />
+      </div>
+    </Dialog>
 
     <Dialog v-model:visible="showDetail" modal header="Jejak Forward Chaining" class="w-full max-w-2xl">
       <div v-if="selected">
@@ -52,20 +79,28 @@
 </template>
 
 <script setup lang="ts">
-import { useZakatData } from '~/composables/useZakat'
+import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
 import { formatMoney } from '~/utils/format'
 
-const { mustahik, evaluations } = useZakatData()
+const { mustahik, periodMustahik, evaluations, deleteMustahik } = useZakatData()
+const { canInput, canDelete, authFetch } = useSession()
+const { periods, selectedPeriodId } = usePeriod()
+const { rules, loadRules } = useRules()
 const search = ref('')
 const filterResult = ref('')
 const filterOptions = ['', 'Prioritas 1', 'Prioritas 2', 'Prioritas 3', 'Pending Verifikasi', 'Tidak Layak']
 const showDetail = ref(false)
 const selected = ref<any>(null)
+const showDelete = ref(false)
+const toDelete = ref<any>(null)
+const deleteError = ref('')
+
+const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 
 const rows = computed(() => {
   const byId = new Map(evaluations.value.map((item) => [item.id, item]))
-  return mustahik.value.map((item) => ({ ...item, result: byId.get(item.id)?.result || '-', perCapita: byId.get(item.id)?.perCapita || 0 }))
+  return periodMustahik.value.map((item) => ({ ...item, result: byId.get(item.id)?.result || '-', perCapita: byId.get(item.id)?.perCapita || 0 }))
 })
 
 const filtered = computed(() => {
@@ -79,7 +114,28 @@ const filtered = computed(() => {
 
 function openDetail(event: any) {
   const niks = mustahik.value.map((item) => item.nik)
-  selected.value = evaluateMustahik(event.data, niks)
+  selected.value = evaluateMustahik(event.data, niks, rules.value.length ? rules.value : undefined)
   showDetail.value = true
 }
+
+function askDelete(item: any) {
+  toDelete.value = item
+  deleteError.value = ''
+  showDelete.value = true
+}
+
+async function confirmDelete() {
+  if (!toDelete.value) return
+  const res = await authFetch('/mustahik/' + toDelete.value.id, { method: 'DELETE' })
+  if (!res.ok) {
+    deleteError.value = 'Gagal menghapus data. Pastikan Anda masuk sebagai Bendahara.'
+    showDelete.value = false
+    return
+  }
+  deleteMustahik(toDelete.value.id)
+  showDelete.value = false
+  toDelete.value = null
+}
+
+onMounted(() => loadRules(authFetch))
 </script>
