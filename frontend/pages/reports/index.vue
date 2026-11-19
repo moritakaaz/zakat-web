@@ -77,7 +77,7 @@
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="Nama periode" name="periodName">
-            <UInput v-model="newPeriod.periodName" placeholder="Contoh: Ramadan 1448 H" class="w-full" />
+            <UInput v-model="newPeriod.periodName" placeholder="Nama periode baru" class="w-full" />
           </UFormField>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <UFormField label="Tanggal mulai" name="startDate">

@@ -92,14 +92,15 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" />
       </div>
-      <p class="text-sm text-slate-500 mt-4">Contoh jejak untuk Ahmad Hidayat ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
-      <ol class="mt-4 flex flex-col gap-2 text-sm">
+      <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
+      <ol v-if="example" class="mt-4 flex flex-col gap-2 text-sm">
         <li v-for="step in example.trace" :key="step.code" class="flex gap-2">
           <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
           <span>{{ step.fired ? 'Menyala' : 'Tidak menyala' }} - {{ step.note }}</span>
         </li>
       </ol>
-      <p class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
+      <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
+      <p v-else class="text-sm text-slate-500 mt-4">Belum ada mustahik pada periode ini, jadi belum ada contoh jejak.</p>
     </UCard>
   </div>
 </template>
@@ -147,9 +148,9 @@ const ruleColumns = computed(() => {
 })
 
 const example = computed(() => {
-  const item = mustahik.value.find((row: any) => row.id === 'KK08')
+  const item = periodMustahik.value[0]
   const niks = mustahik.value.map((row: any) => row.nik)
-  if (!item) return { fullName: '-', result: '-', trace: [] }
+  if (!item) return null
   return evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
 })
 
@@ -204,6 +205,6 @@ async function run() {
 onMounted(async () => {
   await loadAll(authFetch)
   if (dataLoadError.value) loadError.value = dataLoadError.value
-  else if (!rules.value.length) loadError.value = 'Aturan dari server tidak dapat dimuat, dipakai ambang acuan.'
+  else if (!rules.value.length) loadError.value = 'Aturan dari server tidak dapat dimuat.'
 })
 </script>

@@ -13,7 +13,7 @@ async function main() {
   const { initFromDatabase } = require('./load')
   const { store } = require('../store')
 
-  assert.strictEqual(store.mustahik.length, 30)
+  assert.strictEqual(store.mustahik.length, 0)
   const status = await initFromDatabase()
   assert.strictEqual(status.connected, true)
   assert.strictEqual(store.dbMode, 'mysql')

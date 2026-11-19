@@ -21,10 +21,10 @@ function toMustahik(row) {
 }
 
 // Try to load the working data from MySQL. When the database is
-// not configured or not reachable, the in-memory seed data stays
-// in place and the store keeps running in memory mode. When the
-// database is reachable, its rows replace the seed even when a
-// table is empty, so an empty database shows no data.
+// not configured or not reachable, the store stays empty and the
+// store keeps running with no data. When the database is reachable,
+// its rows replace the store even when a table is empty, so an empty
+// database shows no data.
 async function initFromDatabase() {
   const status = await checkConnection()
   if (!status.connected) {

@@ -6,7 +6,7 @@
         <p class="text-sm text-slate-500 mt-1">Masuk untuk mengelola zakat Yayasan Pendidikan Al-Quran Al-Fawwaz.</p>
         <UForm :state="state" class="mt-6 flex flex-col gap-4" @submit="submit">
           <UFormField label="Email" name="email">
-            <UInput id="email" v-model="state.email" type="email" placeholder="bendahara@alfawwaz.or.id" class="w-full" />
+            <UInput id="email" v-model="state.email" type="email" placeholder="email@contoh.id" class="w-full" />
           </UFormField>
           <UFormField label="Kata sandi" name="password">
             <UInput id="password" v-model="state.password" type="password" placeholder="Masukkan kata sandi" class="w-full" />
@@ -14,13 +14,6 @@
           <UAlert v-if="error" color="error" variant="soft" :title="error" icon="i-lucide-circle-x" />
           <UButton type="submit" block>Masuk Aplikasi</UButton>
         </UForm>
-        <div class="mt-6 border-t border-slate-200 pt-4 text-xs text-slate-500">
-          <p class="font-semibold text-slate-900 text-sm">Akun demo</p>
-          <p class="mt-1">bendahara@alfawwaz.or.id, kata sandi bendahara123</p>
-          <p>sekretaris@alfawwaz.or.id, kata sandi sekretaris123</p>
-          <p>kepala@alfawwaz.or.id, kata sandi kepala123</p>
-          <p class="mt-2">Ganti kata sandi demo sebelum dipakai di produksi.</p>
-        </div>
       </UCard>
     </NuxtLayout>
   </div>

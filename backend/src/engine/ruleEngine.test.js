@@ -1,30 +1,104 @@
 const assert = require('assert')
-const mustahik = require('../data/mustahik')
 const { evaluateMustahik, rankResults, summarize } = require('./ruleEngine')
 
-const niks = mustahik.map((item) => item.nik)
-const evaluations = rankResults(mustahik.map((item) => evaluateMustahik(item, niks)))
-const summary = summarize(evaluations)
+// Small fixtures defined here only. No data file is imported.
+const rules = [
+  { code: 'R10', order: 1, condition: 'Dokumen tidak lengkap', result: 'Pending Verifikasi', isActive: true },
+  { code: 'R11', order: 1, condition: 'NIK ganda', result: 'Duplikat', isActive: true },
+  { code: 'R09', order: 2, condition: 'Pendapatan di atas ambang', result: 'Tidak Layak', isActive: true, incomeLimit: 2500000 },
+  { code: 'R01a', order: 3, condition: 'Pendapatan rendah', result: 'Prioritas 1', isActive: true, incomeLimit: 1500000 },
+  { code: 'R01b', order: 3, condition: 'Pendapatan menengah', result: 'Prioritas 2', isActive: true, incomeMin: 1500000, incomeLimit: 2000000 },
+  { code: 'R01c', order: 3, condition: 'Pendapatan atas', result: 'Prioritas 3', isActive: true, incomeMin: 2000001, incomeLimit: 2500000 },
+  { code: 'R02', order: 4, condition: 'Per kapita rendah', result: 'Naik ke Prioritas 1', isActive: true, perCapitaLimit: 300000 },
+  { code: 'R03', order: 4, condition: 'Tanggungan berat', result: 'Tanggungan berat', isActive: true, dependentsMin: 4, incomeLimit: 2000000 },
+  { code: 'R04', order: 4, condition: 'Guru honorer', result: 'Prioritas 1', isActive: true, honorMin: 300000, honorMax: 600000 },
+  { code: 'R05', order: 4, condition: 'Wali santri', result: 'Wali santri', isActive: true, incomeLimit: 2500000 },
+  { code: 'R06', order: 5, condition: 'Kelompok rentan', result: 'Kelompok rentan', isActive: true, incomeLimit: 2000000 },
+  { code: 'R07', order: 5, condition: 'Rumah kontrak', result: 'Rumah kontrak', isActive: true },
+  { code: 'R08', order: 5, condition: 'Beban pendidikan', result: 'Beban pendidikan', isActive: true, schoolMin: 3, incomeLimit: 2000000 },
+  { code: 'R12', order: 6, condition: 'Dana terbatas', result: 'Salurkan berurutan', isActive: true }
+]
 
-for (const item of evaluations) {
-  const source = mustahik.find((row) => row.id === item.id)
-  assert.strictEqual(item.result, source.expectedResult, item.id + ' expected ' + source.expectedResult + ' got ' + item.result)
+function household(id, patch) {
+  return {
+    id,
+    fullName: 'Keluarga ' + id,
+    nik: 'NIK-' + id,
+    address: 'Warakas',
+    occupation: 'Buruh',
+    monthlyIncome: 1000000,
+    dependents: 2,
+    schoolChildren: 1,
+    houseCondition: 'Milik Sendiri',
+    specialStatus: '-',
+    asnaf: 'Miskin',
+    documentStatus: 'Lengkap',
+    periodId: 1,
+    ...patch
+  }
 }
 
-assert.strictEqual(evaluations.length, 30)
+const mustahik = [
+  household('T01', { monthlyIncome: 0, dependents: 5 }),
+  household('T02', { monthlyIncome: 1000000, dependents: 2 }),
+  household('T03', { monthlyIncome: 1700000, dependents: 2 }),
+  household('T04', { monthlyIncome: 1700000, dependents: 6 }),
+  household('T05', { monthlyIncome: 2200000, dependents: 2 }),
+  household('T06', { monthlyIncome: 1200000, dependents: 3, documentStatus: 'KTP saja' }),
+  household('T07', { monthlyIncome: 1000000, dependents: 3 }),
+  household('T08', { monthlyIncome: 3000000, dependents: 2 }),
+  household('T09', { monthlyIncome: 500000, dependents: 2, occupation: 'Guru Honorer TPQ' })
+]
+
+const expected = {
+  T01: 'Prioritas 1',
+  T02: 'Prioritas 1',
+  T03: 'Prioritas 2',
+  T04: 'Prioritas 1',
+  T05: 'Prioritas 3',
+  T06: 'Pending Verifikasi',
+  T07: 'Prioritas 1',
+  T08: 'Tidak Layak',
+  T09: 'Prioritas 1'
+}
+
+const niks = mustahik.map((item) => item.nik)
+const evaluations = rankResults(mustahik.map((item) => evaluateMustahik(item, niks, rules)))
+const summary = summarize(evaluations)
+
+assert.strictEqual(evaluations.length, 9)
+for (const item of evaluations) {
+  assert.strictEqual(item.result, expected[item.id], item.id + ' expected ' + expected[item.id] + ' got ' + item.result)
+}
 assert.deepStrictEqual(summary, {
-  'Prioritas 1': 15,
-  'Prioritas 2': 6,
-  'Prioritas 3': 5,
+  'Prioritas 1': 5,
+  'Prioritas 2': 1,
+  'Prioritas 3': 1,
   'Pending Verifikasi': 1,
   Duplikat: 0,
-  'Tidak Layak': 3
+  'Tidak Layak': 1
 })
 
-const ahmad = evaluations.find((item) => item.id === 'KK08')
-assert.ok(ahmad.firedRules.includes('R01a'))
-assert.ok(ahmad.firedRules.includes('R02'))
-assert.ok(ahmad.trace.length >= 5)
+const teacher = evaluations.find((item) => item.id === 'T09')
+assert.ok(teacher.firedRules.includes('R04'))
+const upgraded = evaluations.find((item) => item.id === 'T04')
+assert.ok(upgraded.firedRules.includes('R02'))
+assert.ok(upgraded.trace.length >= 5)
+
+// A NIK that appears twice flags both households as Duplikat.
+const pair = [
+  household('KA01', { monthlyIncome: 1000000, nik: 'NIK-SAMA' }),
+  household('KA02', { monthlyIncome: 1000000, nik: 'NIK-SAMA' })
+]
+const pairNiks = pair.map((item) => item.nik)
+assert.strictEqual(evaluateMustahik(pair[0], pairNiks, rules).result, 'Duplikat')
+assert.strictEqual(evaluateMustahik(pair[1], pairNiks, rules).result, 'Duplikat')
+
+// With no rules loaded, no rule fires and no threshold is invented.
+const noRules = evaluateMustahik(household('KK99', { monthlyIncome: 100 }), ['NIK-KK99'], [])
+assert.strictEqual(noRules.result, 'Tidak Layak')
+assert.strictEqual(noRules.trace.length, 0)
+assert.strictEqual(noRules.firedRules.length, 0)
 
 console.log('Rule engine test passed')
 console.log(summary)

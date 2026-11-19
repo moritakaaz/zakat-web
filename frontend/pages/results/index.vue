@@ -158,7 +158,7 @@ function download() {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = 'hasil-prioritas-1446H.txt'
+  link.download = 'hasil-prioritas.txt'
   link.click()
   URL.revokeObjectURL(url)
 }

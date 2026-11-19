@@ -1,11 +1,9 @@
 // Forward chaining engine for mustahik priority.
 // Facts enter, rules fire in order, new facts are added, inference stops
 // when no new rule fires or a terminal result is reached.
-// Thresholds come from the rule records passed in, with the default
-// knowledge base as fallback, so editing a rule changes the result
-// without editing this file.
-const defaultRules = require('../data/rules')
-
+// Every threshold comes from the rule records passed in, which come
+// from MySQL. A missing rule never fires and a missing threshold never
+// matches, so the engine never invents a result from numbers in code.
 const PRIORITY_RANK = {
   'Prioritas 1': 1,
   'Prioritas 2': 2,
@@ -31,21 +29,26 @@ function isTeacher(mustahik) {
 }
 
 function findRule(rules, code) {
-  return (rules || []).find((item) => item.code === code) || {}
+  return (rules || []).find((item) => item.code === code)
 }
 
 function active(rules, code) {
   const rule = findRule(rules, code)
-  return rule.isActive !== false
+  return !!rule && rule.isActive !== false
 }
 
-function limit(rules, code, field, fallback) {
-  const value = findRule(rules, code)[field]
-  return typeof value === 'number' ? value : fallback
+function limit(rules, code, field) {
+  const rule = findRule(rules, code)
+  const value = rule ? rule[field] : undefined
+  return typeof value === 'number' ? value : undefined
+}
+
+function moneyText(value) {
+  return 'Rp ' + value.toLocaleString('id-ID')
 }
 
 function evaluateMustahik(mustahik, knownNiks, rules) {
-  const config = Array.isArray(rules) && rules.length ? rules : defaultRules
+  const config = Array.isArray(rules) ? rules : []
   const trace = []
   const notes = []
   const income = mustahik.monthlyIncome || 0
@@ -88,45 +91,60 @@ function evaluateMustahik(mustahik, knownNiks, rules) {
   }
 
   // R09 upper threshold.
+  const upper = limit(config, 'R09', 'incomeLimit')
   const specialCase = dependents >= 6
-  if (active(config, 'R09') && check('R09', income > limit(config, 'R09', 'incomeLimit', 2500000) && !specialCase, 'Pendapatan di atas ambang Warakas')) {
+  if (active(config, 'R09') && check('R09', upper !== undefined && income > upper && !specialCase, 'Pendapatan di atas ambang Warakas')) {
     return finish('Tidak Layak')
   }
 
   // R01a, R01b, R01c income bands set the base priority.
-  if (active(config, 'R01a') && check('R01a', income < limit(config, 'R01a', 'incomeLimit', 1500000), 'Pendapatan kurang dari Rp 1.500.000')) {
+  const lowLimit = limit(config, 'R01a', 'incomeLimit')
+  const midMin = limit(config, 'R01b', 'incomeMin')
+  const midLimit = limit(config, 'R01b', 'incomeLimit')
+  const highMin = limit(config, 'R01c', 'incomeMin')
+  const highLimit = limit(config, 'R01c', 'incomeLimit')
+  if (active(config, 'R01a') && check('R01a', lowLimit !== undefined && income < lowLimit, lowLimit !== undefined ? 'Pendapatan kurang dari ' + moneyText(lowLimit) : 'Ambang aturan tidak tersedia')) {
     result = 'Prioritas 1'
-  } else if (active(config, 'R01b') && check('R01b', income >= limit(config, 'R01b', 'incomeMin', 1500000) && income <= limit(config, 'R01b', 'incomeLimit', 2000000), 'Pendapatan Rp 1.500.000 sampai Rp 2.000.000')) {
+  } else if (active(config, 'R01b') && check('R01b', midMin !== undefined && midLimit !== undefined && income >= midMin && income <= midLimit, midMin !== undefined && midLimit !== undefined ? 'Pendapatan ' + moneyText(midMin) + ' sampai ' + moneyText(midLimit) : 'Ambang aturan tidak tersedia')) {
     result = 'Prioritas 2'
-  } else if (active(config, 'R01c') && check('R01c', income > limit(config, 'R01c', 'incomeMin', 2000001) - 1 && income <= limit(config, 'R01c', 'incomeLimit', 2500000), 'Pendapatan Rp 2.000.001 sampai Rp 2.500.000')) {
+  } else if (active(config, 'R01c') && check('R01c', highMin !== undefined && highLimit !== undefined && income >= highMin && income <= highLimit, highMin !== undefined && highLimit !== undefined ? 'Pendapatan ' + moneyText(highMin) + ' sampai ' + moneyText(highLimit) : 'Ambang aturan tidak tersedia')) {
     result = 'Prioritas 3'
   }
 
   // R02 per capita upgrade.
-  if (active(config, 'R02') && check('R02', capita <= limit(config, 'R02', 'perCapitaLimit', 300000), 'Pendapatan per kapita Rp ' + capita.toLocaleString('id-ID'))) {
+  const capitaLimit = limit(config, 'R02', 'perCapitaLimit')
+  if (active(config, 'R02') && check('R02', capitaLimit !== undefined && capita <= capitaLimit, 'Pendapatan per kapita ' + moneyText(capita))) {
     if (result === 'Prioritas 2' || result === 'Prioritas 3') result = 'Prioritas 1'
   }
 
   // R03 heavy dependents confirm.
-  if (active(config, 'R03')) check('R03', dependents >= limit(config, 'R03', 'dependentsMin', 4) && income <= limit(config, 'R03', 'incomeLimit', 2000000), 'Tanggungan berat')
+  const dependentsMin = limit(config, 'R03', 'dependentsMin')
+  const heavyLimit = limit(config, 'R03', 'incomeLimit')
+  if (active(config, 'R03')) check('R03', dependentsMin !== undefined && heavyLimit !== undefined && dependents >= dependentsMin && income <= heavyLimit, 'Tanggungan berat')
 
   // R04 teacher rule raises to Prioritas 1.
-  if (active(config, 'R04') && check('R04', isTeacher(mustahik) && income >= limit(config, 'R04', 'honorMin', 300000) && income <= limit(config, 'R04', 'honorMax', 600000), 'Guru honorer TPQ')) {
+  const honorMin = limit(config, 'R04', 'honorMin')
+  const honorMax = limit(config, 'R04', 'honorMax')
+  if (active(config, 'R04') && check('R04', honorMin !== undefined && honorMax !== undefined && isTeacher(mustahik) && income >= honorMin && income <= honorMax, 'Guru honorer TPQ')) {
     result = 'Prioritas 1'
   }
 
   // R05 wali santri confirm.
-  if (active(config, 'R05')) check('R05', hasStatus(mustahik, 'Wali Santri') && income < limit(config, 'R05', 'incomeLimit', 2500000), 'Wali santri')
+  const waliLimit = limit(config, 'R05', 'incomeLimit')
+  if (active(config, 'R05')) check('R05', waliLimit !== undefined && hasStatus(mustahik, 'Wali Santri') && income < waliLimit, 'Wali santri')
 
   // R06 vulnerable group confirm.
   const vulnerable = hasStatus(mustahik, 'Janda') || hasStatus(mustahik, 'Lansia') || hasStatus(mustahik, 'Yatim')
-  if (active(config, 'R06')) check('R06', vulnerable && income < limit(config, 'R06', 'incomeLimit', 2000000), 'Kelompok rentan')
+  const vulnerableLimit = limit(config, 'R06', 'incomeLimit')
+  if (active(config, 'R06')) check('R06', vulnerableLimit !== undefined && vulnerable && income < vulnerableLimit, 'Kelompok rentan')
 
   // R07 house tie breaker.
   if (active(config, 'R07')) check('R07', mustahik.houseCondition === 'Kontrak' || mustahik.houseCondition === 'Menumpang', 'Rumah kontrak atau menumpang')
 
   // R08 school burden tie breaker.
-  if (active(config, 'R08')) check('R08', (mustahik.schoolChildren || 0) >= limit(config, 'R08', 'schoolMin', 3) && income <= limit(config, 'R08', 'incomeLimit', 2000000), 'Beban pendidikan tinggi')
+  const schoolMin = limit(config, 'R08', 'schoolMin')
+  const schoolLimit = limit(config, 'R08', 'incomeLimit')
+  if (active(config, 'R08')) check('R08', schoolMin !== undefined && schoolLimit !== undefined && (mustahik.schoolChildren || 0) >= schoolMin && income <= schoolLimit, 'Beban pendidikan tinggi')
 
   if (!result) result = 'Tidak Layak'
   return finish(result)
@@ -149,4 +167,4 @@ function summarize(evaluations) {
   return counts
 }
 
-module.exports = { evaluateMustahik, rankResults, summarize, perCapita, rules: defaultRules }
+module.exports = { evaluateMustahik, rankResults, summarize, perCapita }
