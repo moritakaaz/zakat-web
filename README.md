@@ -116,6 +116,10 @@ Tampilan memakai satu set ikon saja yaitu Lucide lewat Nuxt UI. Ikon dipakai di 
 
 Halaman Proses Rule memuat 14 aturan dari API, bukan dari daftar hard code di frontend. Bendahara dapat mengubah kondisi, kesimpulan, urutan, ambang, dan status aktif tiap aturan. Ambang yang dapat diubah meliputi batas pendapatan, batas per kapita, tanggungan minimum, honor guru, dan anak sekolah minimum. Setelah aturan diubah, jalankan ulang Forward Chaining untuk melihat hasil baru. Nilai acuan tetap menghasilkan Prioritas 1 sebanyak 15 KK, Prioritas 2 sebanyak 6 KK, Prioritas 3 sebanyak 5 KK, Pending Verifikasi sebanyak 1 KK, dan Tidak Layak sebanyak 3 KK.
 
+## Glosarium
+
+Halaman Glosarium dapat dibuka semua peran dari menu samping. Isinya daftar istilah seperti mustahik, muzakki, asnaf, dan Forward Chaining, arti tiap status hasil, tugas tiap peran, dan seluruh 14 aturan rule. Aturan dibaca langsung dari API, bukan dari daftar hard code di frontend, sehingga kalau Bendahara mengubah ambang atau menonaktifkan aturan di halaman Proses Rule, halaman Glosarium ikut berubah. Halaman ini mempunyai kotak pencarian untuk mencari istilah atau aturan berdasarkan kode, kondisi, atau kesimpulan.
+
 ## Periode dan Arsip
 
 Pemilih periode ada di menu samping dan berlaku untuk dashboard, data mustahik, hasil prioritas, dan laporan. Bendahara dapat membuat periode baru dan menutup periode dari halaman Laporan. Arsip periode dibaca dari API dan tiap periode baru mendapat status persetujuan menunggu. Data acuan 30 KK, penerimaan, dan penyaluran tercatat pada periode Ramadan 1446 H.
@@ -132,12 +136,14 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 
 - Login untuk masuk aplikasi
 - Dashboard untuk total muzakki, mustahik, penerimaan, penyaluran, dan sisa saldo
-- Data Mustahik untuk tabel mustahik dengan pencarian dan pagination, serta ubah dan hapus data. Judul kolom dapat diklik untuk mengurutkan tabel, klik kedua membalik urutan, dan klik ketiga mengembalikan urutan awal
+- Data Mustahik untuk tabel mustahik dengan pencarian dan pagination, serta ubah dan hapus data. Judul kolom dapat diklik untuk mengurutkan tabel, klik kedua membalik urutan, dan klik ketiga mengembalikan urutan awal. Klik baris membuka Jejak Forward Chaining dengan badge Terpenuhi hijau dan Tidak terpenuhi merah serta filter Semua, Terpenuhi, dan Tidak terpenuhi
 - Tambah Mustahik untuk form data calon penerima dengan NIK asli dan peringatan duplikat
 - Muzakki dan Penerimaan untuk pencatatan penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus. Tabel muzakki, penerimaan, dan penyaluran dapat diurutkan dengan klik judul kolom
 - Proses Rule untuk 14 aturan dan jejak Forward Chaining
 - Hasil Prioritas untuk ranking penerima. Tabel ranking dapat diurutkan dengan klik judul kolom, dan ada tombol untuk kembali ke urutan ranking
 - Laporan untuk rekap akhir dan arsip periode
+- Glosarium untuk istilah, 14 aturan dari API, arti status hasil, dan tugas tiap peran
+- Menu di layar kecil tampil sebagai drawer dari kiri dengan tombol tutup di kiri atas, sejajar dengan tombol hamburger yang membukanya
 
 ## Data Acuan
 

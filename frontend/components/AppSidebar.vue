@@ -1,6 +1,6 @@
 <template>
-  <aside class="flex h-full w-60 shrink-0 flex-col bg-white p-4">
-    <div class="px-2 pb-4 border-b border-slate-200">
+  <aside :class="fullWidth ? 'w-full' : 'w-60'" class="flex h-full shrink-0 flex-col bg-white p-4">
+    <div v-if="showHeader" class="px-2 pb-4 border-b border-slate-200">
       <p class="font-bold text-emerald-700">Zakat Al-Fawwaz</p>
       <p class="text-xs text-slate-500 mt-1">Yayasan Pendidikan Al-Quran Al-Fawwaz</p>
     </div>
@@ -25,6 +25,7 @@ const { user, authFetch, restore } = useSession()
 const { selectedPeriodId, periods, restorePeriod, selectPeriod, loadPeriods } = usePeriod()
 const { loadDashboard } = useZakatData()
 defineEmits(['navigate'])
+defineProps({ showHeader: { type: Boolean, default: true }, fullWidth: { type: Boolean, default: false } })
 
 async function changePeriod(id: number) {
   selectPeriod(id)
@@ -38,7 +39,8 @@ const allMenu = [
   { label: 'Muzakki dan Penerimaan', to: '/muzakki', icon: 'i-lucide-wallet', roles: ['bendahara', 'sekretaris'] },
   { label: 'Proses Rule', to: '/rules', icon: 'i-lucide-scale', roles: ['bendahara'] },
   { label: 'Hasil Prioritas', to: '/results', icon: 'i-lucide-trophy', roles: ['bendahara', 'sekretaris', 'kepala'] },
-  { label: 'Laporan', to: '/reports', icon: 'i-lucide-file-text', roles: ['bendahara', 'sekretaris', 'kepala'] }
+  { label: 'Laporan', to: '/reports', icon: 'i-lucide-file-text', roles: ['bendahara', 'sekretaris', 'kepala'] },
+  { label: 'Glosarium', to: '/glosarium', icon: 'i-lucide-book-open', roles: ['bendahara', 'sekretaris', 'kepala'] }
 ]
 
 const visibleMenu = computed(() => {

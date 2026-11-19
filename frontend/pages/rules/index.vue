@@ -93,12 +93,19 @@
         <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" />
       </div>
       <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
-      <ol v-if="example" class="mt-4 flex flex-col gap-2 text-sm">
-        <li v-for="step in example.trace" :key="step.code" class="flex gap-2">
+      <div v-if="example" class="flex flex-wrap gap-2 mt-4">
+        <UButton size="xs" :color="exampleFilter === 'Semua' ? 'primary' : 'neutral'" :variant="exampleFilter === 'Semua' ? 'solid' : 'soft'" @click="exampleFilter = 'Semua'">Semua ({{ example.trace.length }})</UButton>
+        <UButton size="xs" color="success" :variant="exampleFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Terpenuhi'">Terpenuhi ({{ exampleFiredCount }})</UButton>
+        <UButton size="xs" color="error" :variant="exampleFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ exampleUnfiredCount }})</UButton>
+      </div>
+      <ol v-if="example" class="mt-3 flex flex-col gap-2 text-sm">
+        <li v-for="step in filteredExampleTrace" :key="step.code" class="flex gap-2 items-center">
           <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-          <span>{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }} - {{ step.note }}</span>
+          <UBadge :color="step.fired ? 'success' : 'error'" variant="soft">{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }}</UBadge>
+          <span>{{ step.note }}</span>
         </li>
       </ol>
+      <p v-if="example && !filteredExampleTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
       <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
       <p v-else class="text-sm text-slate-500 mt-4">Belum ada mustahik pada periode ini, jadi belum ada contoh jejak.</p>
     </UCard>
@@ -153,6 +160,15 @@ const example = computed(() => {
   if (!item) return null
   return evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
 })
+const exampleFilter = ref('Semua')
+const filteredExampleTrace = computed(() => {
+  if (!example.value) return []
+  if (exampleFilter.value === 'Terpenuhi') return example.value.trace.filter((step: any) => step.fired)
+  if (exampleFilter.value === 'Tidak terpenuhi') return example.value.trace.filter((step: any) => !step.fired)
+  return example.value.trace
+})
+const exampleFiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired).length : 0)
+const exampleUnfiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => !step.fired).length : 0)
 
 function thresholdText(rule: any): string {
   const parts: string[] = []

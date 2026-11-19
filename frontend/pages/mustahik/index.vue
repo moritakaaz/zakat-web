@@ -81,12 +81,19 @@
         <div v-if="selected">
           <p class="font-semibold">{{ selected.fullName }} ({{ selected.id }})</p>
           <p class="text-sm text-slate-500 mt-1">Hasil {{ selected.result }} dengan pendapatan per kapita {{ formatMoney(selected.perCapita) }}.</p>
-          <ol class="mt-4 flex flex-col gap-2 text-sm">
-            <li v-for="step in selected.trace" :key="step.code" class="flex gap-2">
+          <div class="flex flex-wrap gap-2 mt-4">
+            <UButton size="xs" :color="traceFilter === 'Semua' ? 'primary' : 'neutral'" :variant="traceFilter === 'Semua' ? 'solid' : 'soft'" @click="traceFilter = 'Semua'">Semua ({{ selected.trace.length }})</UButton>
+            <UButton size="xs" color="success" :variant="traceFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="traceFilter = 'Terpenuhi'">Terpenuhi ({{ firedCount }})</UButton>
+            <UButton size="xs" color="error" :variant="traceFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="traceFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ unfiredCount }})</UButton>
+          </div>
+          <ol class="mt-3 flex flex-col gap-2 text-sm">
+            <li v-for="step in filteredTrace" :key="step.code" class="flex gap-2 items-center">
               <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-              <span>{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }} - {{ step.note }}</span>
+              <UBadge :color="step.fired ? 'success' : 'error'" variant="soft">{{ step.fired ? 'Terpenuhi' : 'Tidak terpenuhi' }}</UBadge>
+              <span>{{ step.note }}</span>
             </li>
           </ol>
+          <p v-if="!filteredTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
           <p class="text-sm mt-4">Aturan yang terpenuhi {{ selected.firedRules.join(', ') || 'tidak ada' }}.</p>
         </div>
       </template>
@@ -113,6 +120,15 @@ const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
 const sortValue = (row: any, key: string) => key === 'result' ? (resultRank[row.result] ?? 99) : row[key]
 const showDetail = ref(false)
 const selected = ref<any>(null)
+const traceFilter = ref('Semua')
+const filteredTrace = computed(() => {
+  if (!selected.value) return []
+  if (traceFilter.value === 'Terpenuhi') return selected.value.trace.filter((step: any) => step.fired)
+  if (traceFilter.value === 'Tidak terpenuhi') return selected.value.trace.filter((step: any) => !step.fired)
+  return selected.value.trace
+})
+const firedCount = computed(() => selected.value ? selected.value.trace.filter((step: any) => step.fired).length : 0)
+const unfiredCount = computed(() => selected.value ? selected.value.trace.filter((step: any) => !step.fired).length : 0)
 const showDelete = ref(false)
 const toDelete = ref<any>(null)
 const deleteError = ref('')
@@ -158,6 +174,7 @@ watch([search, filterResult, sortKey], () => { page.value = 1 })
 function openDetail(item: any) {
   const niks = mustahik.value.map((row) => row.nik)
   selected.value = evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
+  traceFilter.value = 'Semua'
   showDetail.value = true
 }
 

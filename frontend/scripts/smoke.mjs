@@ -12,10 +12,11 @@ const pages = [
   'pages/muzakki/index.vue',
   'pages/rules/index.vue',
   'pages/results/index.vue',
-  'pages/reports/index.vue'
+  'pages/reports/index.vue',
+  'pages/glosarium/index.vue'
 ]
 
-const routes = ['/login', '/dashboard', '/mustahik', '/mustahik/new', '/mustahik/KK01', '/muzakki', '/rules', '/results', '/reports']
+const routes = ['/login', '/dashboard', '/mustahik', '/mustahik/new', '/mustahik/KK01', '/muzakki', '/rules', '/results', '/reports', '/glosarium']
 
 let failed = 0
 for (const page of pages) {
@@ -25,7 +26,7 @@ for (const page of pages) {
   }
 }
 if (failed) process.exit(1)
-console.log('Smoke check passed, all 9 page files exist')
+console.log('Smoke check passed, all 10 page files exist')
 
 const base = process.env.FRONTEND_URL || ''
 if (!base) {
@@ -42,4 +43,4 @@ for (const route of routes) {
   }
 }
 if (failed) process.exit(1)
-console.log('Live smoke check passed, all 9 routes returned 200')
+console.log('Live smoke check passed, all 10 routes returned 200')

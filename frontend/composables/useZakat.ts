@@ -1,6 +1,4 @@
-import { evaluateAll, summarize, type RuleConfig, type Mustahik } from '~/utils/ruleEngine'
-
-export type { Mustahik }
+import { evaluateAll, summarize, type RuleConfig } from '~/utils/ruleEngine'
 
 export interface DashboardData {
   totalMustahik: number
