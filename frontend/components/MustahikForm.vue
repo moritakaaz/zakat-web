@@ -1,73 +1,59 @@
 <template>
-  <form class="bg-white border border-line rounded-lg p-4 mt-6 flex flex-col gap-4 max-w-2xl" @submit.prevent="$emit('submit', form)">
-    <div class="flex flex-col gap-1">
-      <label for="fullName" class="text-sm font-semibold">Nama kepala keluarga</label>
-      <InputText id="fullName" v-model="form.fullName" class="w-full" />
-    </div>
-    <div class="flex flex-col gap-1">
-      <label for="nik" class="text-sm font-semibold">NIK kepala keluarga</label>
-      <InputText id="nik" v-model="form.nik" class="w-full" placeholder="16 digit angka" maxlength="16" />
-      <p class="text-xs text-muted">NIK dipakai untuk cek duplikat pada periode yang sama.</p>
-    </div>
-    <Message v-if="duplicateWarning" severity="warn" :closable="false">{{ duplicateWarning }}</Message>
-    <div class="flex flex-col gap-1">
-      <label for="address" class="text-sm font-semibold">Alamat</label>
-      <InputText id="address" v-model="form.address" class="w-full" />
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div class="flex flex-col gap-1">
-        <label for="occupation" class="text-sm font-semibold">Pekerjaan</label>
-        <InputText id="occupation" v-model="form.occupation" class="w-full" />
+  <UCard class="shadow-sm ring-slate-200 mt-6 max-w-2xl">
+    <form class="flex flex-col gap-4" @submit.prevent="$emit('submit', form)">
+      <UFormField label="Nama kepala keluarga" name="fullName">
+        <UInput id="fullName" v-model="form.fullName" class="w-full" />
+      </UFormField>
+      <UFormField label="NIK kepala keluarga" name="nik" help="NIK dipakai untuk cek duplikat pada periode yang sama.">
+        <UInput id="nik" v-model="form.nik" class="w-full" placeholder="16 digit angka" maxlength="16" />
+      </UFormField>
+      <UAlert v-if="duplicateWarning" color="warning" variant="soft" :title="duplicateWarning" icon="i-lucide-triangle-alert" />
+      <UFormField label="Alamat" name="address">
+        <UInput id="address" v-model="form.address" class="w-full" />
+      </UFormField>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField label="Pekerjaan" name="occupation">
+          <UInput id="occupation" v-model="form.occupation" class="w-full" />
+        </UFormField>
+        <UFormField label="Pendapatan per bulan (Rp)" name="monthlyIncome">
+          <UInputNumber id="monthlyIncome" v-model="form.monthlyIncome" :min="0" class="w-full" />
+        </UFormField>
       </div>
-      <div class="flex flex-col gap-1">
-        <label for="monthlyIncome" class="text-sm font-semibold">Pendapatan per bulan (Rp)</label>
-        <InputNumber id="monthlyIncome" v-model="form.monthlyIncome" class="w-full" />
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField label="Jumlah tanggungan (jiwa)" name="dependents">
+          <UInputNumber id="dependents" v-model="form.dependents" :min="0" class="w-full" />
+        </UFormField>
+        <UFormField label="Jumlah anak sekolah" name="schoolChildren">
+          <UInputNumber id="schoolChildren" v-model="form.schoolChildren" :min="0" class="w-full" />
+        </UFormField>
       </div>
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div class="flex flex-col gap-1">
-        <label for="dependents" class="text-sm font-semibold">Jumlah tanggungan (jiwa)</label>
-        <InputNumber id="dependents" v-model="form.dependents" class="w-full" />
+      <div class="bg-slate-50 ring-1 ring-slate-200 rounded-lg p-3 text-sm flex items-center gap-2">
+        <UIcon name="i-lucide-calculator" class="size-4.5 shrink-0 text-emerald-700" />
+        <span>Pendapatan per kapita <strong>{{ formatMoney(perCapitaValue) }}</strong> per jiwa, dihitung dari pendapatan dibagi jumlah tanggungan.</span>
       </div>
-      <div class="flex flex-col gap-1">
-        <label for="schoolChildren" class="text-sm font-semibold">Jumlah anak sekolah</label>
-        <InputNumber id="schoolChildren" v-model="form.schoolChildren" class="w-full" />
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField label="Kondisi rumah" name="houseCondition">
+          <USelect id="houseCondition" v-model="form.houseCondition" :items="['Milik Sendiri', 'Kontrak', 'Menumpang']" class="w-full" />
+        </UFormField>
+        <UFormField label="Dokumen" name="documentStatus">
+          <USelect id="documentStatus" v-model="form.documentStatus" :items="['Lengkap', 'KTP saja', 'KK saja', 'Tidak ada']" class="w-full" />
+        </UFormField>
       </div>
-    </div>
-    <div class="bg-paper border border-line rounded-lg p-3 text-sm flex items-center gap-2">
-      <Icon name="lucide:calculator" size="18" />
-      <span>Pendapatan per kapita <strong>{{ formatMoney(perCapitaValue) }}</strong> per jiwa, dihitung dari pendapatan dibagi jumlah tanggungan.</span>
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div class="flex flex-col gap-1">
-        <label for="houseCondition" class="text-sm font-semibold">Kondisi rumah</label>
-        <Select id="houseCondition" v-model="form.houseCondition" :options="['Milik Sendiri', 'Kontrak', 'Menumpang']" class="w-full" />
+      <UAlert v-if="form.documentStatus !== 'Lengkap'" color="warning" variant="soft" title="Dokumen belum lengkap. Hasil prioritas akan menjadi Pending Verifikasi sampai dokumen dilengkapi." icon="i-lucide-triangle-alert" />
+      <UFormField label="Status khusus" name="specialStatus">
+        <UInput id="specialStatus" v-model="form.specialStatus" placeholder="Contoh: Wali Santri, Janda, Guru Honorer TPQ" class="w-full" />
+      </UFormField>
+      <UFormField label="Asnaf" name="asnaf">
+        <USelect id="asnaf" v-model="form.asnaf" :items="['Fakir', 'Miskin', 'Fisabilillah', '-']" class="w-full" />
+      </UFormField>
+      <UAlert v-if="error" color="error" variant="soft" :title="error" icon="i-lucide-circle-x" />
+      <UAlert v-if="saved" color="success" variant="soft" :title="'Data tersimpan dengan hasil ' + saved + '.'" icon="i-lucide-circle-check" />
+      <div class="flex flex-wrap gap-2">
+        <UButton type="submit" icon="i-lucide-save">{{ submitLabel }}</UButton>
+        <UButton color="neutral" variant="soft" @click="navigateTo('/mustahik')">Kembali</UButton>
       </div>
-      <div class="flex flex-col gap-1">
-        <label for="documentStatus" class="text-sm font-semibold">Dokumen</label>
-        <Select id="documentStatus" v-model="form.documentStatus" :options="['Lengkap', 'KTP saja', 'KK saja', 'Tidak ada']" class="w-full" />
-      </div>
-    </div>
-    <Message v-if="form.documentStatus !== 'Lengkap'" severity="warn" :closable="false">Dokumen belum lengkap. Hasil prioritas akan menjadi Pending Verifikasi sampai dokumen dilengkapi.</Message>
-    <div class="flex flex-col gap-1">
-      <label for="specialStatus" class="text-sm font-semibold">Status khusus</label>
-      <InputText id="specialStatus" v-model="form.specialStatus" placeholder="Contoh: Wali Santri, Janda, Guru Honorer TPQ" class="w-full" />
-    </div>
-    <div class="flex flex-col gap-1">
-      <label for="asnaf" class="text-sm font-semibold">Asnaf</label>
-      <Select id="asnaf" v-model="form.asnaf" :options="['Fakir', 'Miskin', 'Fisabilillah', '-']" class="w-full" />
-    </div>
-    <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
-    <Message v-if="saved" severity="success" :closable="false">Data tersimpan dengan hasil {{ saved }}.</Message>
-    <div class="flex gap-2">
-      <Button type="submit" :label="submitLabel">
-        <template #icon>
-          <Icon name="lucide:save" size="16" />
-        </template>
-      </Button>
-      <Button label="Kembali" severity="secondary" @click="navigateTo('/mustahik')" />
-    </div>
-  </form>
+    </form>
+  </UCard>
 </template>
 
 <script setup lang="ts">

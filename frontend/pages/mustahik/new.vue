@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold">Tambah Mustahik</h1>
-    <p class="text-sm text-muted mt-1">Isi data calon penerima. Hasil prioritas dihitung otomatis setelah data disimpan.</p>
+    <p class="text-sm text-slate-500 mt-1">Isi data calon penerima. Hasil prioritas dihitung otomatis setelah data disimpan.</p>
     <MustahikForm :initial="initial" :duplicate-warning="duplicateWarning" :error="error" :saved="saved" submit-label="Simpan Mustahik" @submit="submit" />
   </div>
 </template>

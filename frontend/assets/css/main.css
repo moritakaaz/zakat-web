@@ -1,24 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@nuxt/ui";
 
 body {
-  background-color: #F7F5F0;
-  color: #1E293B;
+  background-color: #f8fafc;
+  color: #1e293b;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .tnum {
   font-variant-numeric: tabular-nums;
-}
-
-.p-datatable .p-datatable-thead > tr > th {
-  background-color: #F1F5F9;
-  font-size: 0.8rem;
-  padding: 0.5rem 0.75rem;
-}
-
-.p-datatable .p-datatable-tbody > tr > td {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
 }

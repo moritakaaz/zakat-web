@@ -1,19 +1,19 @@
 <template>
-  <aside class="w-60 shrink-0 bg-white border-r border-line min-h-screen p-4">
-    <div class="px-2 pb-4 border-b border-line">
-      <p class="font-bold text-pine-700">Zakat Al-Fawwaz</p>
-      <p class="text-xs text-muted mt-1">Yayasan Pendidikan Al-Quran Al-Fawwaz</p>
+  <aside class="flex h-full w-60 shrink-0 flex-col bg-white p-4">
+    <div class="px-2 pb-4 border-b border-slate-200">
+      <p class="font-bold text-emerald-700">Zakat Al-Fawwaz</p>
+      <p class="text-xs text-slate-500 mt-1">Yayasan Pendidikan Al-Quran Al-Fawwaz</p>
     </div>
     <nav class="mt-4 flex flex-col gap-1 text-sm">
-      <NuxtLink v-for="item in visibleMenu" :key="item.to" :to="item.to" class="px-3 py-2 rounded-md hover:bg-paper flex items-center gap-2" active-class="bg-pine-100 text-pine-800 font-semibold">
-        <Icon :name="item.icon" size="18" />
+      <NuxtLink v-for="item in visibleMenu" :key="item.to" :to="item.to" class="px-3 py-2 rounded-md hover:bg-slate-100 flex items-center gap-2 text-slate-700" active-class="bg-emerald-100 text-emerald-800 font-semibold" @click="$emit('navigate')">
+        <UIcon :name="item.icon" class="size-4.5 shrink-0" />
         {{ item.label }}
       </NuxtLink>
     </nav>
     <div class="mt-6 px-2">
-      <p class="text-xs text-muted">Periode</p>
-      <Select :model-value="selectedPeriodId" :options="periods" option-label="periodName" option-value="id" class="w-full mt-2" @update:model-value="selectPeriod" />
-      <p class="text-xs text-muted mt-2">{{ activePeriod?.periodName }} - {{ activePeriod?.status === 'closed' ? 'Tutup' : 'Aktif' }}</p>
+      <p class="text-xs text-slate-500">Periode</p>
+      <USelect :model-value="selectedPeriodId" :items="periods" value-key="id" label-key="periodName" class="w-full mt-2" @update:model-value="selectPeriod" />
+      <p class="text-xs text-slate-500 mt-2">{{ activePeriod?.periodName }} - {{ activePeriod?.status === 'closed' ? 'Tutup' : 'Aktif' }}</p>
     </div>
   </aside>
 </template>
@@ -23,15 +23,16 @@ import { useSession, usePeriod } from '~/composables/useZakat'
 
 const { user, authFetch, restore } = useSession()
 const { selectedPeriodId, periods, restorePeriod, selectPeriod, loadPeriods } = usePeriod()
+defineEmits(['navigate'])
 
 const allMenu = [
-  { label: 'Dashboard', to: '/dashboard', icon: 'lucide:layout-dashboard', roles: ['bendahara', 'sekretaris', 'kepala'] },
-  { label: 'Data Mustahik', to: '/mustahik', icon: 'lucide:users', roles: ['bendahara', 'sekretaris'] },
-  { label: 'Tambah Mustahik', to: '/mustahik/new', icon: 'lucide:user-plus', roles: ['bendahara', 'sekretaris'] },
-  { label: 'Muzakki dan Penerimaan', to: '/muzakki', icon: 'lucide:wallet', roles: ['bendahara', 'sekretaris'] },
-  { label: 'Proses Rule', to: '/rules', icon: 'lucide:scale', roles: ['bendahara'] },
-  { label: 'Hasil Prioritas', to: '/results', icon: 'lucide:trophy', roles: ['bendahara', 'sekretaris', 'kepala'] },
-  { label: 'Laporan', to: '/reports', icon: 'lucide:file-text', roles: ['bendahara', 'sekretaris', 'kepala'] }
+  { label: 'Dashboard', to: '/dashboard', icon: 'i-lucide-layout-dashboard', roles: ['bendahara', 'sekretaris', 'kepala'] },
+  { label: 'Data Mustahik', to: '/mustahik', icon: 'i-lucide-users', roles: ['bendahara', 'sekretaris'] },
+  { label: 'Tambah Mustahik', to: '/mustahik/new', icon: 'i-lucide-user-plus', roles: ['bendahara', 'sekretaris'] },
+  { label: 'Muzakki dan Penerimaan', to: '/muzakki', icon: 'i-lucide-wallet', roles: ['bendahara', 'sekretaris'] },
+  { label: 'Proses Rule', to: '/rules', icon: 'i-lucide-scale', roles: ['bendahara'] },
+  { label: 'Hasil Prioritas', to: '/results', icon: 'i-lucide-trophy', roles: ['bendahara', 'sekretaris', 'kepala'] },
+  { label: 'Laporan', to: '/reports', icon: 'i-lucide-file-text', roles: ['bendahara', 'sekretaris', 'kepala'] }
 ]
 
 const visibleMenu = computed(() => {

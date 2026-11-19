@@ -1,89 +1,80 @@
 <template>
   <div>
-    <h1 class="text-xl font-bold">Proses Rule</h1>
-    <p class="text-sm text-muted mt-1">Mesin Rule-Based dengan Forward Chaining. Fakta diperiksa dari R10 sampai R08 secara berurutan.</p>
+    <h1 class="text-xl font-bold text-slate-900">Proses Rule</h1>
+    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Fakta diperiksa dari R10 sampai R08 secara berurutan.</p>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="font-semibold flex items-center gap-2">
-            <Icon name="lucide:scale" size="18" />
-            Basis pengetahuan
-          </h2>
-          <p class="text-sm text-muted">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
+    <UCard class="shadow-sm ring-slate-200 mt-6">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+              <UIcon name="i-lucide-scale" class="size-4.5 text-emerald-700" />
+              Basis pengetahuan
+            </h2>
+            <p class="text-sm text-slate-500">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
+          </div>
+          <UButton v-if="canRunRules" icon="i-lucide-play" @click="run">Jalankan Forward Chaining</UButton>
         </div>
-        <Button v-if="canRunRules" label="Jalankan Forward Chaining" @click="run" />
-      </div>
+      </template>
       <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
-      <p v-if="saveMessage" class="text-sm text-green-700 mt-3">{{ saveMessage }}</p>
-      <DataTable :value="rules" size="small" class="mt-4">
-        <Column field="code" header="Kode" />
-        <Column field="condition" header="Kondisi IF" />
-        <Column field="result" header="Kesimpulan THEN" />
-        <Column field="order" header="Urutan" />
-        <Column header="Ambang">
-          <template #body="slotProps">
-            <span class="tnum text-sm">{{ thresholdText(slotProps.data) }}</span>
+      <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
+      <div class="overflow-x-auto mt-4">
+        <UTable :data="rules" :columns="ruleColumns">
+          <template #threshold-cell="{ row }">
+            <span class="tnum text-sm">{{ thresholdText(row.original) }}</span>
           </template>
-        </Column>
-        <Column header="Aktif">
-          <template #body="slotProps">
-            <span class="text-sm">{{ slotProps.data.isActive ? 'Ya' : 'Tidak' }}</span>
+          <template #isActive-cell="{ row }">
+            <UBadge :color="row.original.isActive ? 'success' : 'neutral'" variant="soft">{{ row.original.isActive ? 'Ya' : 'Tidak' }}</UBadge>
           </template>
-        </Column>
-        <Column v-if="canRunRules" header="Aksi">
-          <template #body="slotProps">
-            <Button severity="secondary" size="small" @click="openEdit(slotProps.data)">
-              <template #icon>
-                <Icon name="lucide:pencil" size="14" />
-              </template>
-              Ubah
-            </Button>
+          <template #actions-cell="{ row }">
+            <UButton v-if="canRunRules" color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openEdit(row.original)">Ubah</UButton>
           </template>
-        </Column>
-      </DataTable>
-      <p v-if="!canRunRules" class="text-xs text-muted mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
-    </div>
-
-    <Dialog v-model:visible="showEdit" modal header="Ubah aturan" class="w-full max-w-xl">
-      <div v-if="editing" class="flex flex-col gap-4">
-        <p class="font-semibold">{{ editing.code }} - {{ editing.condition }}</p>
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">Kondisi IF</label>
-          <InputText v-model="editing.condition" class="w-full" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">Kesimpulan THEN</label>
-          <InputText v-model="editing.result" class="w-full" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold">Urutan</label>
-            <InputNumber v-model="editing.order" class="w-full" />
-          </div>
-          <div class="flex items-center gap-2 mt-6">
-            <Checkbox v-model="editing.isActive" :binary="true" input-id="ruleActive" />
-            <label for="ruleActive" class="text-sm">Aturan aktif</label>
-          </div>
-        </div>
-        <div v-for="field in numericFields" :key="field.key" class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">{{ field.label }}</label>
-          <InputNumber v-model="editing[field.key]" class="w-full" />
-        </div>
-        <p v-if="editError" class="text-sm text-red-600">{{ editError }}</p>
-        <div class="flex gap-2">
-          <Button label="Simpan Aturan" @click="saveEdit" />
-          <Button label="Batal" severity="secondary" @click="showEdit = false" />
-        </div>
+        </UTable>
       </div>
-    </Dialog>
+      <p v-if="!canRunRules" class="text-xs text-slate-500 mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
+    </UCard>
 
-    <div v-if="ran" class="bg-white border border-line rounded-lg p-4 mt-4">
-      <h2 class="font-semibold">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+    <UModal v-model:open="showEdit" title="Ubah aturan">
+      <template #body>
+        <div v-if="editing" class="flex flex-col gap-4">
+          <p class="font-semibold">{{ editing.code }} - {{ editing.condition }}</p>
+          <UFormField label="Kondisi IF" name="condition">
+            <UInput v-model="editing.condition" class="w-full" />
+          </UFormField>
+          <UFormField label="Kesimpulan THEN" name="result">
+            <UInput v-model="editing.result" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Urutan" name="order">
+              <UInputNumber v-model="editing.order" :min="0" class="w-full" />
+            </UFormField>
+            <div class="flex items-center gap-2 mt-6">
+              <USwitch v-model="editing.isActive" />
+              <label class="text-sm">Aturan aktif</label>
+            </div>
+          </div>
+          <UFormField v-for="field in numericFields" :key="field.key" :label="field.label" :name="field.key">
+            <UInputNumber v-model="editing[field.key]" class="w-full" />
+          </UFormField>
+          <p v-if="editError" class="text-sm text-red-600">{{ editError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton @click="saveEdit">Simpan Aturan</UButton>
+          <UButton color="neutral" variant="soft" @click="showEdit = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <UCard v-if="ran" class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <h2 class="font-semibold text-slate-900">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
+      </template>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" />
       </div>
-      <p class="text-sm text-muted mt-4">Contoh jejak untuk Ahmad Hidayat ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
+      <p class="text-sm text-slate-500 mt-4">Contoh jejak untuk Ahmad Hidayat ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
       <ol class="mt-4 flex flex-col gap-2 text-sm">
         <li v-for="step in example.trace" :key="step.code" class="flex gap-2">
           <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
@@ -91,7 +82,7 @@
         </li>
       </ol>
       <p class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
-    </div>
+    </UCard>
   </div>
 </template>
 
@@ -120,6 +111,19 @@ const numericFields = [
   { key: 'honorMax', label: 'Honor maksimum (Rp)' },
   { key: 'schoolMin', label: 'Anak sekolah minimum' }
 ]
+
+const ruleColumns = computed(() => {
+  const base = [
+    { accessorKey: 'code', header: 'Kode' },
+    { accessorKey: 'condition', header: 'Kondisi IF' },
+    { accessorKey: 'result', header: 'Kesimpulan THEN' },
+    { accessorKey: 'order', header: 'Urutan' },
+    { id: 'threshold', header: 'Ambang' },
+    { accessorKey: 'isActive', header: 'Aktif' }
+  ]
+  if (canRunRules.value) base.push({ id: 'actions', header: 'Aksi' } as any)
+  return base
+})
 
 const example = computed(() => {
   const item = mustahik.value.find((row: any) => row.id === 'KK08')

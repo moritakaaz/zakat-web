@@ -206,7 +206,8 @@ Data acuan berasal dari wawancara dengan pengurus dan pencatatan buku bendahara 
 ## 9 Teknologi
 
 - Frontend NuxtJS dengan TailwindCSS
-- UI Library PrimeVue sebagai library komponen paling lengkap
+- UI Library Nuxt UI sebagai library komponen untuk tampilan aplikasi
+- Migrasi dari PrimeVue ke Nuxt UI dilakukan atas permintaan pengguna setelah melihat aplikasi berjalan
 - Backend NodeJS dengan Express atau Hono
 - Database MySQL
 - Bahasa pemrograman JavaScript dan TypeScript

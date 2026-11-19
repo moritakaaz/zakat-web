@@ -9,7 +9,7 @@ export function formatKg(value: number): string {
 export function prioritySeverity(result: string): string {
   if (result === 'Prioritas 1') return 'success'
   if (result === 'Prioritas 2') return 'info'
-  if (result === 'Prioritas 3') return 'warn'
-  if (result === 'Pending Verifikasi') return 'secondary'
-  return 'danger'
+  if (result === 'Prioritas 3') return 'warning'
+  if (result === 'Pending Verifikasi') return 'neutral'
+  return 'error'
 }

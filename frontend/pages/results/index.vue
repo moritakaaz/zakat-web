@@ -1,67 +1,66 @@
 <template>
   <div>
-    <h1 class="text-xl font-bold">Hasil Prioritas</h1>
-    <p class="text-sm text-muted mt-1">Ranking setelah Forward Chaining periode {{ periodName }}. Urutan memakai prioritas, lalu pendapatan per kapita terendah.</p>
+    <h1 class="text-xl font-bold text-slate-900">Hasil Prioritas</h1>
+    <p class="text-sm text-slate-500 mt-1">Ranking setelah Forward Chaining periode {{ periodName }}. Urutan memakai prioritas, lalu pendapatan per kapita terendah.</p>
 
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
       <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" />
     </div>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="font-semibold flex items-center gap-2">
-            <Icon name="lucide:badge-check" size="18" />
-            Persetujuan Kepala TPQ
-          </h2>
-          <p class="text-sm text-muted">Hasil {{ periodName }} berlaku setelah disetujui Kepala TPQ.</p>
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+              <UIcon name="i-lucide-badge-check" class="size-4.5 text-emerald-700" />
+              Persetujuan Kepala TPQ
+            </h2>
+            <p class="text-sm text-slate-500">Hasil {{ periodName }} berlaku setelah disetujui Kepala TPQ.</p>
+          </div>
+          <UBadge :color="approval.status === 'approved' ? 'success' : approval.status === 'rejected' ? 'error' : 'warning'" variant="soft" size="lg">{{ approvalLabel }}</UBadge>
         </div>
-        <span class="text-sm font-semibold">{{ approvalLabel }}</span>
-      </div>
-      <p v-if="approval.approverName" class="text-sm text-muted mt-2">Diputuskan oleh {{ approval.approverName }} pada {{ approval.decidedAt || '-' }}</p>
+      </template>
+      <p v-if="approval.approverName" class="text-sm text-slate-500 mt-2">Diputuskan oleh {{ approval.approverName }} pada {{ approval.decidedAt || '-' }}</p>
       <p v-if="approval.note" class="text-sm mt-1">Catatan {{ approval.note }}</p>
       <p v-if="approvalError" class="text-sm text-red-600 mt-2">{{ approvalError }}</p>
       <div v-if="isKepala" class="flex flex-col gap-2 mt-4">
-        <InputText v-model="approvalNote" placeholder="Catatan persetujuan, boleh dikosongkan" class="w-full" />
-        <div class="flex gap-2">
-          <Button label="Setujui Hasil" size="small" @click="decide('approve')" />
-          <Button label="Tolak Hasil" severity="danger" size="small" @click="decide('reject')" />
+        <UInput v-model="approvalNote" placeholder="Catatan persetujuan, boleh dikosongkan" class="w-full" />
+        <div class="flex flex-wrap gap-2">
+          <UButton size="sm" icon="i-lucide-check" @click="decide('approve')">Setujui Hasil</UButton>
+          <UButton color="error" size="sm" icon="i-lucide-x" @click="decide('reject')">Tolak Hasil</UButton>
         </div>
       </div>
-      <p v-else class="text-xs text-muted mt-3">Hanya Kepala TPQ yang dapat menyetujui atau menolak hasil ini.</p>
-    </div>
+      <p v-else class="text-xs text-slate-500 mt-3">Hanya Kepala TPQ yang dapat menyetujui atau menolak hasil ini.</p>
+    </UCard>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold">Ranking penerima</h2>
-        <Button label="Unduh Laporan" severity="secondary" size="small" @click="download" />
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold text-slate-900">Ranking penerima</h2>
+          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-download" @click="download">Unduh Laporan</UButton>
+        </div>
+      </template>
+      <div class="overflow-x-auto">
+        <UTable :data="rankPage" :columns="rankColumns">
+          <template #rank-cell="{ row }">
+            <span class="tnum">{{ (page - 1) * 10 + row.index + 1 }}</span>
+          </template>
+          <template #perCapita-cell="{ row }">
+            <span class="tnum">{{ formatMoney(row.original.perCapita) }}</span>
+          </template>
+          <template #firedRules-cell="{ row }">
+            <span class="tnum">{{ row.original.firedRules.join(', ') }}</span>
+          </template>
+          <template #result-cell="{ row }">
+            <PriorityTag :value="row.original.result" />
+          </template>
+        </UTable>
       </div>
-      <DataTable :value="evaluations" paginator :rows="10" size="small" class="mt-3">
-        <Column field="rank" header="Urutan">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.index + 1 }}</span>
-          </template>
-        </Column>
-        <Column field="id" header="Kode" />
-        <Column field="fullName" header="Nama Kepala Keluarga" />
-        <Column field="perCapita" header="Per Kapita">
-          <template #body="slotProps">
-            <span class="tnum">{{ formatMoney(slotProps.data.perCapita) }}</span>
-          </template>
-        </Column>
-        <Column field="firedRules" header="Aturan Menyala">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.data.firedRules.join(', ') }}</span>
-          </template>
-        </Column>
-        <Column field="result" header="Hasil">
-          <template #body="slotProps">
-            <PriorityTag :value="slotProps.data.result" />
-          </template>
-        </Column>
-      </DataTable>
-      <p class="text-xs text-muted mt-3">Aturan R12 dipakai di sini. Bila dana tidak cukup, Prioritas 1 disalurkan pertama, lalu Prioritas 2, lalu Prioritas 3.</p>
-    </div>
+      <div class="flex justify-center mt-4">
+        <UPagination v-model:page="page" :total="evaluations.length" :items-per-page="10" />
+      </div>
+      <p class="text-xs text-slate-500 mt-3">Aturan R12 dipakai di sini. Bila dana tidak cukup, Prioritas 1 disalurkan pertama, lalu Prioritas 2, lalu Prioritas 3.</p>
+    </UCard>
   </div>
 </template>
 
@@ -73,6 +72,16 @@ const { evaluations, summary } = useZakatData()
 const { user, authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
+const page = ref(1)
+const rankPage = computed(() => evaluations.value.slice((page.value - 1) * 10, page.value * 10))
+const rankColumns = [
+  { id: 'rank', header: 'Urutan' },
+  { accessorKey: 'id', header: 'Kode' },
+  { accessorKey: 'fullName', header: 'Nama Kepala Keluarga' },
+  { accessorKey: 'perCapita', header: 'Per Kapita' },
+  { accessorKey: 'firedRules', header: 'Aturan Menyala' },
+  { accessorKey: 'result', header: 'Hasil' }
+]
 
 const approval = ref({ periodId: 1, status: 'pending', approverId: null, approverName: null, note: '', decidedAt: null })
 const approvalNote = ref('')

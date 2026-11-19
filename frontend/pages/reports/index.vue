@@ -1,23 +1,25 @@
 <template>
   <div>
-    <h1 class="text-xl font-bold">Laporan</h1>
-    <p class="text-sm text-muted mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}.</p>
+    <h1 class="text-xl font-bold text-slate-900">Laporan</h1>
+    <p class="text-sm text-slate-500 mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}.</p>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-      <StatCard label="Beras masuk" :value="formatKg(riceIn)" :hint="formatKg(riceIn)" icon="lucide:wheat" />
-      <StatCard label="Beras tersalur" :value="formatKg(riceOut)" :hint="'Sisa ' + formatKg(riceIn - riceOut)" icon="lucide:wheat" />
-      <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="lucide:wallet" />
-      <StatCard label="Sisa saldo" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="lucide:hand-coins" />
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+      <StatCard label="Beras masuk" :value="formatKg(riceIn)" :hint="formatKg(riceIn)" icon="i-lucide-wheat" />
+      <StatCard label="Beras tersalur" :value="formatKg(riceOut)" :hint="'Sisa ' + formatKg(riceIn - riceOut)" icon="i-lucide-wheat" />
+      <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
+      <StatCard label="Sisa saldo" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="i-lucide-hand-coins" />
     </div>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold flex items-center gap-2">
-          <Icon name="lucide:file-text" size="18" />
-          Rekap akhir
-        </h2>
-        <Button label="Cetak Laporan" severity="secondary" size="small" @click="printReport" />
-      </div>
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+            <UIcon name="i-lucide-file-text" class="size-4.5 text-emerald-700" />
+            Rekap akhir
+          </h2>
+          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-printer" @click="printReport">Cetak Laporan</UButton>
+        </div>
+      </template>
       <div class="mt-4 flex flex-col gap-2 text-sm max-w-xl">
         <div class="flex justify-between"><span>Total penerimaan beras</span><span class="tnum font-semibold">{{ formatKg(riceIn) }}</span></div>
         <div class="flex justify-between"><span>Total penyaluran beras</span><span class="tnum font-semibold">{{ formatKg(riceOut) }}</span></div>
@@ -26,60 +28,62 @@
         <div class="flex justify-between"><span>Zakat mal</span><span class="tnum">{{ formatMoney(malMoney) }}</span></div>
         <div class="flex justify-between"><span>Infaq</span><span class="tnum">{{ formatMoney(infaqMoney) }}</span></div>
         <div class="flex justify-between"><span>Total penyaluran uang</span><span class="tnum font-semibold">{{ formatMoney(moneyOut) }}</span></div>
-        <div class="flex justify-between border-t border-line pt-2"><span class="font-semibold">Sisa saldo uang</span><span class="tnum font-bold">{{ formatMoney(balance) }}</span></div>
+        <div class="flex justify-between border-t border-slate-200 pt-2"><span class="font-semibold">Sisa saldo uang</span><span class="tnum font-bold">{{ formatMoney(balance) }}</span></div>
         <div class="flex justify-between"><span>Jumlah KK menerima penyaluran</span><span class="tnum font-semibold">{{ layakCount }} KK</span></div>
       </div>
-      <p class="text-xs text-muted mt-4">Sisa saldo dipertahankan sebagai cadangan penyaluran susulan dan santunan bulan berikutnya, dicatat di buku dan ditandatangani Kepala TPQ.</p>
-    </div>
+      <p class="text-xs text-slate-500 mt-4">Sisa saldo dipertahankan sebagai cadangan penyaluran susulan dan santunan bulan berikutnya, dicatat di buku dan ditandatangani Kepala TPQ.</p>
+    </UCard>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold flex items-center gap-2">
-          <Icon name="lucide:archive" size="18" />
-          Arsip periode
-        </h2>
-        <Button v-if="isBendahara" label="Buat Periode Baru" size="small" @click="showCreate = true" />
-      </div>
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+            <UIcon name="i-lucide-archive" class="size-4.5 text-emerald-700" />
+            Arsip periode
+          </h2>
+          <UButton v-if="isBendahara" size="sm" icon="i-lucide-plus" @click="showCreate = true">Buat Periode Baru</UButton>
+        </div>
+      </template>
       <p v-if="periodError" class="text-sm text-red-600 mt-3">{{ periodError }}</p>
-      <DataTable :value="periods" size="small" class="mt-3">
-        <Column field="periodName" header="Periode" />
-        <Column field="startDate" header="Mulai" />
-        <Column field="endDate" header="Selesai" />
-        <Column field="status" header="Status" />
-        <Column header="Aksi">
-          <template #body="slotProps">
+      <div class="overflow-x-auto mt-3">
+        <UTable :data="periods" :columns="periodColumns">
+          <template #status-cell="{ row }">
+            <UBadge :color="row.original.status === 'active' ? 'success' : 'neutral'" variant="soft">{{ row.original.status }}</UBadge>
+          </template>
+          <template #actions-cell="{ row }">
             <div class="flex gap-2">
-              <Button severity="secondary" size="small" @click="selectPeriod(slotProps.data.id)">Lihat</Button>
-              <Button v-if="isBendahara && slotProps.data.status === 'active'" severity="secondary" size="small" @click="closePeriod(slotProps.data.id)">Tutup Periode</Button>
+              <UButton color="neutral" variant="soft" size="sm" @click="selectPeriod(row.original.id)">Lihat</UButton>
+              <UButton v-if="isBendahara && row.original.status === 'active'" color="neutral" variant="soft" size="sm" @click="closePeriod(row.original.id)">Tutup Periode</UButton>
             </div>
           </template>
-        </Column>
-      </DataTable>
-    </div>
-
-    <Dialog v-model:visible="showCreate" modal header="Buat periode baru" class="w-full max-w-md">
-      <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">Nama periode</label>
-          <InputText v-model="newPeriod.periodName" placeholder="Contoh: Ramadan 1448 H" class="w-full" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold">Tanggal mulai</label>
-            <InputText v-model="newPeriod.startDate" type="date" class="w-full" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold">Tanggal selesai</label>
-            <InputText v-model="newPeriod.endDate" type="date" class="w-full" />
-          </div>
-        </div>
-        <p v-if="periodError" class="text-sm text-red-600">{{ periodError }}</p>
-        <div class="flex gap-2">
-          <Button label="Simpan Periode" @click="createPeriod" />
-          <Button label="Batal" severity="secondary" @click="showCreate = false" />
-        </div>
+        </UTable>
       </div>
-    </Dialog>
+    </UCard>
+
+    <UModal v-model:open="showCreate" title="Buat periode baru">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="Nama periode" name="periodName">
+            <UInput v-model="newPeriod.periodName" placeholder="Contoh: Ramadan 1448 H" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Tanggal mulai" name="startDate">
+              <UInput v-model="newPeriod.startDate" type="date" class="w-full" />
+            </UFormField>
+            <UFormField label="Tanggal selesai" name="endDate">
+              <UInput v-model="newPeriod.endDate" type="date" class="w-full" />
+            </UFormField>
+          </div>
+          <p v-if="periodError" class="text-sm text-red-600">{{ periodError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton @click="createPeriod">Simpan Periode</UButton>
+          <UButton color="neutral" variant="soft" @click="showCreate = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -105,6 +109,13 @@ const fitrahMoney = computed(() => moneyByType('Zakat Fitrah'))
 const malMoney = computed(() => moneyByType('Zakat Mal'))
 const infaqMoney = computed(() => moneyByType('Infaq'))
 const layakCount = computed(() => (summary.value['Prioritas 1'] || 0) + (summary.value['Prioritas 2'] || 0) + (summary.value['Prioritas 3'] || 0))
+const periodColumns = [
+  { accessorKey: 'periodName', header: 'Periode' },
+  { accessorKey: 'startDate', header: 'Mulai' },
+  { accessorKey: 'endDate', header: 'Selesai' },
+  { accessorKey: 'status', header: 'Status' },
+  { id: 'actions', header: 'Aksi' }
+]
 
 const showCreate = ref(false)
 const periodError = ref('')

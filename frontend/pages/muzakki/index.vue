@@ -1,123 +1,107 @@
 <template>
   <div>
-    <h1 class="text-xl font-bold">Muzakki dan Penerimaan</h1>
-    <p class="text-sm text-muted mt-1">Pencatatan penerimaan zakat {{ periodName }} mengikuti buku bendahara.</p>
+    <h1 class="text-xl font-bold text-slate-900">Muzakki dan Penerimaan</h1>
+    <p class="text-sm text-slate-500 mt-1">Pencatatan penerimaan zakat {{ periodName }} mengikuti buku bendahara.</p>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-      <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada data acuan" icon="lucide:wheat" />
-      <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="lucide:wallet" />
-      <StatCard label="Baris penerimaan" :value="String(receipts.length)" hint="Baris pada data acuan" icon="lucide:receipt" />
-      <StatCard label="Sisa saldo uang" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="lucide:hand-coins" />
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+      <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada data acuan" icon="i-lucide-wheat" />
+      <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
+      <StatCard label="Baris penerimaan" :value="String(receipts.length)" hint="Baris pada data acuan" icon="i-lucide-receipt" />
+      <StatCard label="Sisa saldo uang" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="i-lucide-hand-coins" />
     </div>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold flex items-center gap-2">
-          <Icon name="lucide:users" size="18" />
-          Data muzakki
-        </h2>
-        <Button v-if="canInput" label="Tambah Muzakki" size="small" @click="openCreate" />
-      </div>
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+            <UIcon name="i-lucide-users" class="size-4.5 text-emerald-700" />
+            Data muzakki
+          </h2>
+          <UButton v-if="canInput" size="sm" icon="i-lucide-user-plus" @click="openCreate">Tambah Muzakki</UButton>
+        </div>
+      </template>
       <p v-if="muzakkiError" class="text-sm text-red-600 mt-3">{{ muzakkiError }}</p>
-      <DataTable :value="muzakki" paginator :rows="10" size="small" class="mt-3">
-        <Column field="id" header="Kode" />
-        <Column field="fullName" header="Nama" sortable />
-        <Column field="address" header="Alamat" />
-        <Column field="zakatType" header="Jenis Zakat" />
-        <Column field="amount" header="Jumlah">
-          <template #body="slotProps">
-            <span class="tnum">{{ formatMoney(slotProps.data.amount) }}</span>
+      <div class="overflow-x-auto">
+        <UTable :data="muzakkiPage" :columns="muzakkiColumns">
+          <template #amount-cell="{ row }">
+            <span class="tnum">{{ formatMoney(row.original.amount) }}</span>
           </template>
-        </Column>
-        <Column v-if="canInput" header="Aksi">
-          <template #body="slotProps">
-            <div class="flex gap-1">
-              <Button severity="secondary" size="small" @click="openEdit(slotProps.data)">
-                <template #icon>
-                  <Icon name="lucide:pencil" size="14" />
-                </template>
-                Ubah
-              </Button>
-              <Button v-if="canDelete" severity="danger" size="small" @click="removeMuzakki(slotProps.data.id)">
-                <template #icon>
-                  <Icon name="lucide:trash-2" size="14" />
-                </template>
-                Hapus
-              </Button>
+          <template #actions-cell="{ row }">
+            <div v-if="canInput" class="flex gap-1">
+              <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openEdit(row.original)">Ubah</UButton>
+              <UButton v-if="canDelete" color="error" variant="soft" size="sm" icon="i-lucide-trash-2" @click="removeMuzakki(row.original.id)">Hapus</UButton>
             </div>
           </template>
-        </Column>
-      </DataTable>
-      <Message v-if="!muzakki.length" severity="info" class="mt-4">Data muzakki dari server belum dimuat. Pastikan backend berjalan dan Anda sudah masuk.</Message>
-    </div>
-
-    <Dialog v-model:visible="showForm" modal :header="editingId ? 'Ubah muzakki' : 'Tambah muzakki'" class="w-full max-w-md">
-      <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">Nama muzakki</label>
-          <InputText v-model="form.fullName" class="w-full" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-semibold">Alamat</label>
-          <InputText v-model="form.address" class="w-full" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold">Jenis zakat</label>
-            <Select v-model="form.zakatType" :options="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold">Jumlah (Rp)</label>
-            <InputNumber v-model="form.amount" class="w-full" />
-          </div>
-        </div>
-        <p v-if="muzakkiError" class="text-sm text-red-600">{{ muzakkiError }}</p>
-        <div class="flex gap-2">
-          <Button label="Simpan Muzakki" @click="saveMuzakki" />
-          <Button label="Batal" severity="secondary" @click="showForm = false" />
-        </div>
+        </UTable>
       </div>
-    </Dialog>
+      <div class="flex justify-center mt-4">
+        <UPagination v-model:page="muzakkiPageNo" :total="muzakki.length" :items-per-page="10" />
+      </div>
+      <UAlert v-if="!muzakki.length" color="info" variant="soft" title="Data muzakki dari server belum dimuat. Pastikan backend berjalan dan Anda sudah masuk." icon="i-lucide-info" class="mt-4" />
+    </UCard>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <h2 class="font-semibold">Penerimaan dari muzakki</h2>
-      <DataTable :value="receipts" paginator :rows="10" size="small" class="mt-3">
-        <Column field="date" header="Tanggal" />
-        <Column field="zakatType" header="Jenis Zakat" />
-        <Column field="name" header="Muzakki" />
-        <Column field="form" header="Bentuk" />
-        <Column field="quantityKg" header="Beras (kg)">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.data.quantityKg || '-' }}</span>
-          </template>
-        </Column>
-        <Column field="amountMoney" header="Nilai Uang">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.data.amountMoney ? formatMoney(slotProps.data.amountMoney) : '-' }}</span>
-          </template>
-        </Column>
-        <Column field="note" header="Keterangan" />
-      </DataTable>
-    </div>
+    <UModal v-model:open="showForm" :title="editingId ? 'Ubah muzakki' : 'Tambah muzakki'">
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField label="Nama muzakki" name="fullName">
+            <UInput v-model="form.fullName" class="w-full" />
+          </UFormField>
+          <UFormField label="Alamat" name="address">
+            <UInput v-model="form.address" class="w-full" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField label="Jenis zakat" name="zakatType">
+              <USelect v-model="form.zakatType" :items="['Zakat Fitrah', 'Zakat Mal', 'Infaq']" class="w-full" />
+            </UFormField>
+            <UFormField label="Jumlah (Rp)" name="amount">
+              <UInputNumber v-model="form.amount" :min="0" class="w-full" />
+            </UFormField>
+          </div>
+          <p v-if="muzakkiError" class="text-sm text-red-600">{{ muzakkiError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton @click="saveMuzakki">Simpan Muzakki</UButton>
+          <UButton color="neutral" variant="soft" @click="showForm = false">Batal</UButton>
+        </div>
+      </template>
+    </UModal>
 
-    <div class="bg-white border border-line rounded-lg p-4 mt-4">
-      <h2 class="font-semibold">Penyaluran kepada mustahik</h2>
-      <DataTable :value="distributions" size="small" class="mt-3">
-        <Column field="date" header="Tanggal" />
-        <Column field="zakatType" header="Jenis Zakat" />
-        <Column field="name" header="Kelompok Penerima" />
-        <Column field="quantityKg" header="Beras (kg)">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.data.quantityKg || '-' }}</span>
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <h2 class="font-semibold text-slate-900">Penerimaan dari muzakki</h2>
+      </template>
+      <div class="overflow-x-auto">
+        <UTable :data="receiptsPage" :columns="receiptColumns">
+          <template #quantityKg-cell="{ row }">
+            <span class="tnum">{{ row.original.quantityKg || '-' }}</span>
           </template>
-        </Column>
-        <Column field="amountMoney" header="Nilai Uang">
-          <template #body="slotProps">
-            <span class="tnum">{{ slotProps.data.amountMoney ? formatMoney(slotProps.data.amountMoney) : '-' }}</span>
+          <template #amountMoney-cell="{ row }">
+            <span class="tnum">{{ row.original.amountMoney ? formatMoney(row.original.amountMoney) : '-' }}</span>
           </template>
-        </Column>
-      </DataTable>
-    </div>
+        </UTable>
+      </div>
+      <div class="flex justify-center mt-4">
+        <UPagination v-model:page="receiptsPageNo" :total="receipts.length" :items-per-page="10" />
+      </div>
+    </UCard>
+
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <h2 class="font-semibold text-slate-900">Penyaluran kepada mustahik</h2>
+      </template>
+      <div class="overflow-x-auto">
+        <UTable :data="distributions" :columns="distributionColumns">
+          <template #quantityKg-cell="{ row }">
+            <span class="tnum">{{ row.original.quantityKg || '-' }}</span>
+          </template>
+          <template #amountMoney-cell="{ row }">
+            <span class="tnum">{{ row.original.amountMoney ? formatMoney(row.original.amountMoney) : '-' }}</span>
+          </template>
+        </UTable>
+      </div>
+    </UCard>
   </div>
 </template>
 
@@ -139,6 +123,38 @@ const muzakkiError = ref('')
 const showForm = ref(false)
 const editingId = ref('')
 const form = ref({ fullName: '', address: '', zakatType: 'Infaq', amount: 0 })
+const muzakkiPageNo = ref(1)
+const receiptsPageNo = ref(1)
+const muzakkiPage = computed(() => muzakki.value.slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
+const receiptsPage = computed(() => receipts.slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
+
+const muzakkiColumns = computed(() => {
+  const base = [
+    { accessorKey: 'id', header: 'Kode' },
+    { accessorKey: 'fullName', header: 'Nama' },
+    { accessorKey: 'address', header: 'Alamat' },
+    { accessorKey: 'zakatType', header: 'Jenis Zakat' },
+    { accessorKey: 'amount', header: 'Jumlah' }
+  ]
+  if (canInput.value) base.push({ id: 'actions', header: 'Aksi' } as any)
+  return base
+})
+const receiptColumns = [
+  { accessorKey: 'date', header: 'Tanggal' },
+  { accessorKey: 'zakatType', header: 'Jenis Zakat' },
+  { accessorKey: 'name', header: 'Muzakki' },
+  { accessorKey: 'form', header: 'Bentuk' },
+  { accessorKey: 'quantityKg', header: 'Beras (kg)' },
+  { accessorKey: 'amountMoney', header: 'Nilai Uang' },
+  { accessorKey: 'note', header: 'Keterangan' }
+]
+const distributionColumns = [
+  { accessorKey: 'date', header: 'Tanggal' },
+  { accessorKey: 'zakatType', header: 'Jenis Zakat' },
+  { accessorKey: 'name', header: 'Kelompok Penerima' },
+  { accessorKey: 'quantityKg', header: 'Beras (kg)' },
+  { accessorKey: 'amountMoney', header: 'Nilai Uang' }
+]
 
 async function loadMuzakki() {
   try {

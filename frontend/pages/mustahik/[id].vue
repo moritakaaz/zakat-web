@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold">Ubah Mustahik</h1>
-    <p class="text-sm text-muted mt-1">Ubah data calon penerima. Hasil prioritas dihitung ulang setelah data disimpan.</p>
+    <p class="text-sm text-slate-500 mt-1">Ubah data calon penerima. Hasil prioritas dihitung ulang setelah data disimpan.</p>
     <p v-if="notFound" class="text-sm text-red-600 mt-4">Data mustahik tidak ditemukan.</p>
     <MustahikForm v-else-if="initial" :initial="initial" :duplicate-warning="duplicateWarning" :error="error" :saved="saved" submit-label="Simpan Perubahan" @submit="submit" />
   </div>

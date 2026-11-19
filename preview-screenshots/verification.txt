@@ -1,0 +1,19 @@
+== health ==
+{"status":"ok","database":{"connected":false,"reason":"Database not configured"},"dbMode":"memory"}
+== login bendahara (token disingkat) ==
+{'id': 'U01', 'name': 'Bendahara TPQ', 'email': 'bendahara@alfawwaz.or.id', 'role': 'bendahara'} token_length 245
+== dashboard ==
+{"data":{"totalMustahik":30,"totalMuzakki":10,"moneyIn":7450000,"moneyOut":6800000,"balance":650000,"riceIn":130,"riceOut":130,"riceBalance":0,"summary":{"Prioritas 1":15,"Prioritas 2":6,"Prioritas 3":5,"Pending Verifikasi":1,"Duplikat":0,"Tidak Layak":3}}}
+== frontend routes ==
+/login 200
+/dashboard 200
+/mustahik 200
+/mustahik/new 200
+/muzakki 200
+/rules 200
+/results 200
+/reports 200
+== processes ==
+2555 /bin/bash --norc --noprofile
+2558 node src/index.js 
+2727 node server/index.mjs 
