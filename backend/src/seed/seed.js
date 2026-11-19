@@ -18,8 +18,8 @@ async function main() {
     multipleStatements: true
   })
   try {
-    const schema = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8')
-    const seed = fs.readFileSync(path.join(__dirname, '..', 'db', 'seed.sql'), 'utf8')
+    const schema = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8')
+    const seed = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'seed.sql'), 'utf8')
     await connection.query(schema)
     await connection.query(seed)
     console.log('Database seeded')
