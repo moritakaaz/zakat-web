@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-xl font-bold text-slate-900">Proses Rule</h1>
-    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Fakta diperiksa dari R10 sampai R08 secara berurutan. Klik judul kolom untuk mengurutkan.</p>
+    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Aturan diperiksa dari urutan terkecil, dari R10 dan R11 sampai R12.</p>
 
     <UCard class="shadow-sm ring-slate-200 mt-6">
       <template #header>
@@ -18,37 +18,7 @@
       </template>
       <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
       <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
-      <div class="overflow-x-auto mt-4">
-        <UTable :data="sortedRules" :columns="ruleColumns">
-          <template #code-header>
-            <SortButton label="Kode" column="code" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #condition-header>
-            <SortButton label="Kondisi IF" column="condition" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #result-header>
-            <SortButton label="Kesimpulan THEN" column="result" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #order-header>
-            <SortButton label="Urutan" column="order" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #threshold-header>
-            <SortButton label="Ambang" column="threshold" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #isActive-header>
-            <SortButton label="Aktif" column="isActive" :sort-key="sortKey" :sort-direction="sortDirection" @toggle="toggleSort" />
-          </template>
-          <template #threshold-cell="{ row }">
-            <span class="tnum text-sm">{{ thresholdText(row.original) }}</span>
-          </template>
-          <template #isActive-cell="{ row }">
-            <UBadge :color="row.original.isActive ? 'success' : 'neutral'" variant="soft">{{ row.original.isActive ? 'Ya' : 'Tidak' }}</UBadge>
-          </template>
-          <template #actions-cell="{ row }">
-            <UButton v-if="canRunRules" color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="openEdit(row.original)">Ubah</UButton>
-          </template>
-        </UTable>
-      </div>
+      <RuleList :rules="sortedRules" show-edit class="mt-4" @edit="openEdit" />
       <p v-if="!canRunRules" class="text-xs text-slate-500 mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
     </UCard>
 
@@ -115,14 +85,12 @@
 <script setup lang="ts">
 import { useZakatData, useSession, useRules, usePeriod } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
-import { useTableSort } from '~/utils/tableSort'
 
 const { mustahik, periodMustahik, summary, loadError: dataLoadError, loadAll } = useZakatData()
 const { authFetch, canRunRules } = useSession()
 const { rules, loadRules } = useRules()
 const { selectedPeriodId } = usePeriod()
-const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
-const sortedRules = computed(() => sortRows(rules.value, (row: any, key: string) => key === 'threshold' ? thresholdText(row) : key === 'isActive' ? (row.isActive ? 1 : 0) : row[key]))
+const sortedRules = computed(() => [...rules.value].sort((a: any, b: any) => (a.order - b.order) || String(a.code).localeCompare(String(b.code), 'id')))
 const ran = ref(false)
 const runSummary = ref<Record<string, number>>({})
 const loadError = ref('')
@@ -141,19 +109,6 @@ const numericFields = [
   { key: 'schoolMin', label: 'Anak sekolah minimum' }
 ]
 
-const ruleColumns = computed(() => {
-  const base = [
-    { accessorKey: 'code', header: 'Kode' },
-    { accessorKey: 'condition', header: 'Kondisi IF' },
-    { accessorKey: 'result', header: 'Kesimpulan THEN' },
-    { accessorKey: 'order', header: 'Urutan' },
-    { id: 'threshold', header: 'Ambang' },
-    { accessorKey: 'isActive', header: 'Aktif' }
-  ]
-  if (canRunRules.value) base.push({ id: 'actions', header: 'Aksi' } as any)
-  return base
-})
-
 const example = computed(() => {
   const item = periodMustahik.value[0]
   const niks = mustahik.value.map((row: any) => row.nik)
@@ -169,18 +124,6 @@ const filteredExampleTrace = computed(() => {
 })
 const exampleFiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => step.fired).length : 0)
 const exampleUnfiredCount = computed(() => example.value ? example.value.trace.filter((step: any) => !step.fired).length : 0)
-
-function thresholdText(rule: any): string {
-  const parts: string[] = []
-  if (typeof rule.incomeMin === 'number') parts.push('Min Rp ' + rule.incomeMin.toLocaleString('id-ID'))
-  if (typeof rule.incomeLimit === 'number') parts.push('Maks Rp ' + rule.incomeLimit.toLocaleString('id-ID'))
-  if (typeof rule.perCapitaLimit === 'number') parts.push('Per kapita Rp ' + rule.perCapitaLimit.toLocaleString('id-ID'))
-  if (typeof rule.dependentsMin === 'number') parts.push('Tanggungan ' + rule.dependentsMin)
-  if (typeof rule.honorMin === 'number') parts.push('Honor Rp ' + rule.honorMin.toLocaleString('id-ID'))
-  if (typeof rule.honorMax === 'number') parts.push('sampai Rp ' + rule.honorMax.toLocaleString('id-ID'))
-  if (typeof rule.schoolMin === 'number') parts.push('Sekolah ' + rule.schoolMin)
-  return parts.join(', ') || '-'
-}
 
 function openEdit(rule: any) {
   editing.value = { ...rule }

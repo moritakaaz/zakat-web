@@ -27,24 +27,7 @@
         </div>
       </template>
       <p class="text-sm text-slate-500">Aturan diperiksa berurutan dari urutan terkecil. R10 dan R11 diperiksa paling dulu, lalu R09, lalu kelompok pendapatan R01a sampai R01c, lalu aturan penegas R02 sampai R08, dan R12 mengatur urutan penyaluran bila dana kurang.</p>
-      <div class="flex flex-col gap-2 mt-4 text-sm">
-        <div class="hidden sm:flex gap-3 text-xs font-semibold text-slate-500 pb-1 border-b border-slate-200">
-          <span class="w-14 shrink-0">Kode</span>
-          <span class="flex-1">Kondisi IF</span>
-          <span class="flex-1">Kesimpulan THEN</span>
-          <span class="w-14 shrink-0 text-right">Urutan</span>
-          <span class="w-20 shrink-0 text-right">Aktif</span>
-        </div>
-        <div v-for="rule in filteredRules" :key="rule.code" class="flex flex-col sm:flex-row gap-1 sm:gap-3 sm:items-center py-2 border-b border-slate-100 last:border-0">
-          <span class="font-semibold text-slate-900 w-14 shrink-0">{{ rule.code }}</span>
-          <span class="flex-1 text-slate-600">{{ rule.condition }}</span>
-          <span class="flex-1 text-slate-900">{{ rule.result }}</span>
-          <span class="w-14 shrink-0 sm:text-right text-slate-500">{{ rule.order }}</span>
-          <span class="w-20 shrink-0 sm:text-right">
-            <UBadge :color="rule.isActive ? 'success' : 'neutral'" variant="soft">{{ rule.isActive ? 'Ya' : 'Tidak' }}</UBadge>
-          </span>
-        </div>
-      </div>
+      <RuleList :rules="filteredRules" class="mt-4" />
       <p v-if="!filteredRules.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan yang cocok.</p>
       <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
     </UCard>
