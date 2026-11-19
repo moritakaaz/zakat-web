@@ -109,7 +109,7 @@ import { useZakatData, useSession, useRules, usePeriod } from '~/composables/use
 import { evaluateMustahik } from '~/utils/ruleEngine'
 import { useTableSort } from '~/utils/tableSort'
 
-const { mustahik, periodMustahik, summary } = useZakatData()
+const { mustahik, periodMustahik, summary, loadError: dataLoadError, loadAll } = useZakatData()
 const { authFetch, canRunRules } = useSession()
 const { rules, loadRules } = useRules()
 const { selectedPeriodId } = usePeriod()
@@ -149,6 +149,7 @@ const ruleColumns = computed(() => {
 const example = computed(() => {
   const item = mustahik.value.find((row: any) => row.id === 'KK08')
   const niks = mustahik.value.map((row: any) => row.nik)
+  if (!item) return { fullName: '-', result: '-', trace: [] }
   return evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
 })
 
@@ -201,7 +202,8 @@ async function run() {
 }
 
 onMounted(async () => {
-  await loadRules(authFetch)
-  if (!rules.value.length) loadError.value = 'Aturan dari server tidak dapat dimuat, dipakai ambang acuan.'
+  await loadAll(authFetch)
+  if (dataLoadError.value) loadError.value = dataLoadError.value
+  else if (!rules.value.length) loadError.value = 'Aturan dari server tidak dapat dimuat, dipakai ambang acuan.'
 })
 </script>

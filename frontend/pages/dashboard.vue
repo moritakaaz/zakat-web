@@ -3,6 +3,8 @@
     <h1 class="text-xl font-bold text-slate-900">Dashboard</h1>
     <p class="text-sm text-slate-500 mt-1">Periode {{ periodName }}. Angka dari pencatatan bendahara.</p>
 
+    <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
+
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Mustahik terdata" :value="String(data.totalMustahik)" hint="KK pada periode ini" icon="i-lucide-users" />
       <StatCard label="Uang masuk" :value="formatMoney(data.moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
@@ -75,13 +77,12 @@
 </template>
 
 <script setup lang="ts">
-import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
+import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
 
-const { dashboard, evaluations, mustahik } = useZakatData()
+const { dashboard, evaluations, mustahik, loadError, loadAll, loadDashboard } = useZakatData()
 const { authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
-const { loadRules } = useRules()
 const data = dashboard
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
 const layakCount = computed(() => (data.value.summary['Prioritas 1'] || 0) + (data.value.summary['Prioritas 2'] || 0) + (data.value.summary['Prioritas 3'] || 0))
@@ -131,5 +132,9 @@ const barOptions = {
   plugins: { legend: { position: 'bottom' } }
 }
 
-onMounted(() => loadRules(authFetch))
+onMounted(async () => {
+  await loadAll(authFetch)
+})
+
+watch(selectedPeriodId, () => loadDashboard(authFetch))
 </script>

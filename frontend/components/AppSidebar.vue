@@ -12,18 +12,24 @@
     </nav>
     <div class="mt-6 px-2">
       <p class="text-xs text-slate-500">Periode</p>
-      <USelect :model-value="selectedPeriodId" :items="periods" value-key="id" label-key="periodName" class="w-full mt-2" @update:model-value="selectPeriod" />
+      <USelect :model-value="selectedPeriodId" :items="periods" value-key="id" label-key="periodName" class="w-full mt-2" @update:model-value="changePeriod" />
       <p class="text-xs text-slate-500 mt-2">{{ activePeriod?.periodName }} - {{ activePeriod?.status === 'closed' ? 'Tutup' : 'Aktif' }}</p>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { useSession, usePeriod } from '~/composables/useZakat'
+import { useSession, usePeriod, useZakatData } from '~/composables/useZakat'
 
 const { user, authFetch, restore } = useSession()
 const { selectedPeriodId, periods, restorePeriod, selectPeriod, loadPeriods } = usePeriod()
+const { loadDashboard } = useZakatData()
 defineEmits(['navigate'])
+
+async function changePeriod(id: number) {
+  selectPeriod(id)
+  await loadDashboard(authFetch)
+}
 
 const allMenu = [
   { label: 'Dashboard', to: '/dashboard', icon: 'i-lucide-layout-dashboard', roles: ['bendahara', 'sekretaris', 'kepala'] },

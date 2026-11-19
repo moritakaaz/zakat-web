@@ -1,4 +1,4 @@
-import type { Mustahik } from '~/data/mustahik'
+export interface Mustahik { id: string, fullName: string, nik: string, address: string, occupation: string, monthlyIncome: number, dependents: number, schoolChildren: number, houseCondition: string, specialStatus: string, asnaf: string, documentStatus: string, expectedResult?: string, periodId?: number }
 
 export interface TraceStep {
   code: string

@@ -3,6 +3,7 @@
     <h1 class="text-xl font-bold text-slate-900">Hasil Prioritas</h1>
     <p class="text-sm text-slate-500 mt-1">Ranking setelah Forward Chaining periode {{ periodName }}. Urutan memakai prioritas, lalu pendapatan per kapita terendah.</p>
 
+    <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
       <StatCard v-for="(count, label) in summary" :key="label" :label="label" :value="String(count)" hint="KK" />
     </div>
@@ -84,7 +85,7 @@ import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney } from '~/utils/format'
 import { useTableSort, resultRank } from '~/utils/tableSort'
 
-const { evaluations, summary } = useZakatData()
+const { evaluations, summary, loadError, loadAll } = useZakatData()
 const { user, authFetch } = useSession()
 const { periods, selectedPeriodId } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
@@ -143,7 +144,10 @@ async function decide(action: string) {
   approval.value = body.data
 }
 
-onMounted(loadApproval)
+onMounted(async () => {
+  await loadAll(authFetch)
+  await loadApproval()
+})
 
 function download() {
   const lines = ['Hasil Prioritas Mustahik ' + periodName.value, '']

@@ -3,6 +3,7 @@
     <h1 class="text-xl font-bold">Tambah Mustahik</h1>
     <p class="text-sm text-slate-500 mt-1">Isi data calon penerima. Hasil prioritas dihitung otomatis setelah data disimpan.</p>
     <MustahikForm :initial="initial" :duplicate-warning="duplicateWarning" :error="error" :saved="saved" submit-label="Simpan Mustahik" @submit="submit" />
+    <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-4" />
   </div>
 </template>
 
@@ -10,7 +11,7 @@
 import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
 import { evaluateMustahik } from '~/utils/ruleEngine'
 
-const { mustahik, addMustahik } = useZakatData()
+const { mustahik, loadError, loadMustahik } = useZakatData()
 const { authFetch } = useSession()
 const { selectedPeriodId } = usePeriod()
 const { rules, loadRules } = useRules()
@@ -32,9 +33,12 @@ const error = ref('')
 const saved = ref('')
 const duplicateWarning = ref('')
 
-onMounted(() => loadRules(authFetch))
+onMounted(async () => {
+  await loadRules(authFetch)
+  await loadMustahik(authFetch)
+})
 
-function submit(form: any) {
+async function submit(form: any) {
   error.value = ''
   saved.value = ''
   duplicateWarning.value = ''
@@ -53,10 +57,23 @@ function submit(form: any) {
     error.value = 'NIK sudah tercatat pada periode yang sama.'
     return
   }
-  const id = addMustahik({ ...form, nik: cleanNik, periodId: selectedPeriodId.value })
-  authFetch('/mustahik', { method: 'POST', body: JSON.stringify({ ...form, nik: cleanNik, periodId: selectedPeriodId.value }) }).catch(() => {})
-  const item = mustahik.value.find((row: any) => row.id === id)
+  let res: Response
+  try {
+    res = await authFetch('/mustahik', { method: 'POST', body: JSON.stringify({ ...form, nik: cleanNik, periodId: selectedPeriodId.value }) })
+  } catch (error) {
+    error.value = 'Gagal menyimpan data. Periksa apakah backend berjalan lalu coba lagi.'
+    return
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    error.value = (body && body.error) || 'Gagal menyimpan data. Pastikan Anda masuk sebagai Bendahara atau Sekretaris.'
+    return
+  }
+  const created = await res.json().catch(() => null)
+  const item = created && created.data ? created.data : null
+  await loadMustahik(authFetch)
+  const savedItem = item || mustahik.value.find((row: any) => row.nik === cleanNik)
   const niks = mustahik.value.map((row: any) => row.nik)
-  saved.value = evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined).result
+  saved.value = savedItem ? evaluateMustahik(savedItem, niks, rules.value.length ? rules.value : undefined).result : ''
 }
 </script>

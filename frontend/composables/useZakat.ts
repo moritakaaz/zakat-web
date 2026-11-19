@@ -1,6 +1,6 @@
-import { mustahikSeed } from '~/data/mustahik'
-import { receipts, distributions } from '~/data/finance'
-import { evaluateAll, summarize, type RuleConfig } from '~/utils/ruleEngine'
+import { evaluateAll, summarize, type RuleConfig, type Mustahik } from '~/utils/ruleEngine'
+
+export type { Mustahik }
 
 export interface DashboardData {
   totalMustahik: number
@@ -22,12 +22,25 @@ export interface Period {
   status: string
 }
 
+const loadErrorText = 'Data dari server tidak dapat dimuat. Periksa apakah backend berjalan lalu muat ulang halaman.'
+
+type FetchFn = (path: string, options?: any) => Promise<Response>
+
+function useLoadError() {
+  return useState<string>('zakat-load-error', () => '')
+}
+
+async function fetchList(authFetch: FetchFn, path: string): Promise<any[]> {
+  const res = await authFetch(path)
+  if (!res.ok) throw new Error('Request failed with status ' + res.status)
+  const body = await res.json()
+  return Array.isArray(body.data) ? body.data : []
+}
+
 export function usePeriod() {
   const selectedPeriodId = useState<number>('selected-period', () => 1)
-  const periods = useState<Period[]>('periods', () => [
-    { id: 1, periodName: 'Ramadan 1446 H', startDate: '2025-03-01', endDate: '2025-03-29', status: 'closed' },
-    { id: 2, periodName: 'Ramadan 1447 H', startDate: '2026-02-18', endDate: '2026-03-19', status: 'active' }
-  ])
+  const periods = useState<Period[]>('periods', () => [])
+  const loadError = useLoadError()
 
   function restorePeriod() {
     if (!import.meta.client) return
@@ -40,14 +53,12 @@ export function usePeriod() {
     if (import.meta.client) localStorage.setItem('zakat-period', String(id))
   }
 
-  async function loadPeriods(authFetch: (path: string, options?: any) => Promise<Response>) {
+  async function loadPeriods(authFetch: FetchFn) {
     try {
-      const res = await authFetch('/periods')
-      if (!res.ok) return
-      const body = await res.json()
-      if (Array.isArray(body.data) && body.data.length) periods.value = body.data
+      periods.value = await fetchList(authFetch, '/periods')
     } catch (error) {
-      // Keep the seed periods when the API is not reachable.
+      periods.value = []
+      loadError.value = loadErrorText
     }
   }
 
@@ -56,15 +67,14 @@ export function usePeriod() {
 
 export function useRules() {
   const rules = useState<RuleConfig[]>('rules', () => [])
+  const loadError = useLoadError()
 
-  async function loadRules(authFetch: (path: string, options?: any) => Promise<Response>) {
+  async function loadRules(authFetch: FetchFn) {
     try {
-      const res = await authFetch('/rules')
-      if (!res.ok) return
-      const body = await res.json()
-      if (Array.isArray(body.data) && body.data.length) rules.value = body.data
+      rules.value = await fetchList(authFetch, '/rules')
     } catch (error) {
-      // Keep the default thresholds when the API is not reachable.
+      rules.value = []
+      loadError.value = loadErrorText
     }
   }
 
@@ -72,22 +82,42 @@ export function useRules() {
 }
 
 export function useZakatData() {
-  const mustahik = useState('mustahik', () => mustahikSeed.map((item) => ({ periodId: 1, ...item })))
+  const mustahik = useState<any[]>('mustahik', () => [])
+  const receipts = useState<any[]>('receipts', () => [])
+  const distributions = useState<any[]>('distributions', () => [])
+  const dashboardData = useState<DashboardData | null>('dashboard-data', () => null)
+  const loadError = useLoadError()
   const { selectedPeriodId } = usePeriod()
-  const { rules } = useRules()
+  const { rules, loadRules } = useRules()
+  const { loadPeriods } = usePeriod()
   const periodMustahik = computed(() => mustahik.value.filter((item: any) => Number(item.periodId || 1) === selectedPeriodId.value))
   const evaluations = computed(() => evaluateAll(periodMustahik.value, rules.value.length ? rules.value : undefined))
   const summary = computed(() => summarize(evaluations.value))
 
+  const periodReceipts = computed(() => receipts.value.filter((row: any) => Number(row.periodId || 1) === selectedPeriodId.value))
+  const periodDistributions = computed(() => distributions.value.filter((row: any) => Number(row.periodId || 1) === selectedPeriodId.value))
+
   const dashboard = computed<DashboardData>(() => {
-    const isPeriodOne = selectedPeriodId.value === 1
-    const moneyIn = isPeriodOne ? receipts.reduce((sum, row) => sum + row.amountMoney, 0) : 0
-    const moneyOut = isPeriodOne ? distributions.reduce((sum, row) => sum + row.amountMoney, 0) : 0
-    const riceIn = isPeriodOne ? receipts.reduce((sum, row) => sum + row.quantityKg, 0) : 0
-    const riceOut = isPeriodOne ? distributions.reduce((sum, row) => sum + row.quantityKg, 0) : 0
+    if (dashboardData.value) {
+      return {
+        totalMustahik: dashboardData.value.totalMustahik,
+        totalMuzakki: dashboardData.value.totalMuzakki,
+        moneyIn: dashboardData.value.moneyIn,
+        moneyOut: dashboardData.value.moneyOut,
+        balance: dashboardData.value.balance,
+        riceIn: dashboardData.value.riceIn,
+        riceOut: dashboardData.value.riceOut,
+        riceBalance: dashboardData.value.riceBalance,
+        summary: dashboardData.value.summary && Object.keys(dashboardData.value.summary).length ? dashboardData.value.summary : summary.value
+      }
+    }
+    const moneyIn = periodReceipts.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+    const moneyOut = periodDistributions.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+    const riceIn = periodReceipts.value.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
+    const riceOut = periodDistributions.value.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
     return {
       totalMustahik: periodMustahik.value.length,
-      totalMuzakki: isPeriodOne ? receipts.length : 0,
+      totalMuzakki: periodReceipts.value.length,
       moneyIn,
       moneyOut,
       balance: moneyIn - moneyOut,
@@ -98,28 +128,54 @@ export function useZakatData() {
     }
   })
 
-  function addMustahik(item: any) {
-    const next = mustahik.value.reduce((max: number, row: any) => Math.max(max, Number(String(row.id).replace(/\D/g, '')) || 0), 0) + 1
-    const id = 'KK' + String(next).padStart(2, '0')
-    mustahik.value.push({ periodId: selectedPeriodId.value, id, ...item })
-    return id
+  async function loadMustahik(authFetch: FetchFn) {
+    try {
+      mustahik.value = await fetchList(authFetch, '/mustahik')
+    } catch (error) {
+      mustahik.value = []
+      loadError.value = loadErrorText
+    }
   }
 
-  function updateMustahik(id: string, patch: any) {
-    const index = mustahik.value.findIndex((row: any) => row.id === id)
-    if (index < 0) return false
-    mustahik.value[index] = { ...mustahik.value[index], ...patch }
-    return true
+  async function loadFinance(authFetch: FetchFn) {
+    try {
+      const [loadedReceipts, loadedDistributions] = await Promise.all([
+        fetchList(authFetch, '/receipts'),
+        fetchList(authFetch, '/distributions')
+      ])
+      receipts.value = loadedReceipts
+      distributions.value = loadedDistributions
+    } catch (error) {
+      receipts.value = []
+      distributions.value = []
+      loadError.value = loadErrorText
+    }
   }
 
-  function deleteMustahik(id: string) {
-    const index = mustahik.value.findIndex((row: any) => row.id === id)
-    if (index < 0) return false
-    mustahik.value.splice(index, 1)
-    return true
+  async function loadDashboard(authFetch: FetchFn) {
+    try {
+      const res = await authFetch('/dashboard?periodId=' + selectedPeriodId.value)
+      if (!res.ok) throw new Error('Request failed with status ' + res.status)
+      const body = await res.json()
+      dashboardData.value = body.data || null
+    } catch (error) {
+      dashboardData.value = null
+      loadError.value = loadErrorText
+    }
   }
 
-  return { mustahik, periodMustahik, evaluations, summary, dashboard, receipts, distributions, addMustahik, updateMustahik, deleteMustahik }
+  async function loadAll(authFetch: FetchFn) {
+    loadError.value = ''
+    await Promise.all([
+      loadMustahik(authFetch),
+      loadFinance(authFetch),
+      loadDashboard(authFetch),
+      loadPeriods(authFetch),
+      loadRules(authFetch)
+    ])
+  }
+
+  return { mustahik, receipts, distributions, periodMustahik, evaluations, summary, dashboard, loadError, loadMustahik, loadFinance, loadDashboard, loadAll }
 }
 
 export function useSession() {

@@ -3,6 +3,7 @@
     <h1 class="text-xl font-bold text-slate-900">Laporan</h1>
     <p class="text-sm text-slate-500 mt-1">Laporan penerimaan dan penyaluran periode {{ periodName }}. Klik judul kolom pada arsip untuk mengurutkan.</p>
 
+    <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Beras masuk" :value="formatKg(riceIn)" :hint="formatKg(riceIn)" icon="i-lucide-wheat" />
       <StatCard label="Beras tersalur" :value="formatKg(riceOut)" :hint="'Sisa ' + formatKg(riceIn - riceOut)" icon="i-lucide-wheat" />
@@ -104,16 +105,15 @@ import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
-const { receipts, distributions, summary } = useZakatData()
+const { receipts, distributions, summary, loadError, loadAll, loadDashboard } = useZakatData()
 const { authFetch, isBendahara } = useSession()
 const { periods, selectedPeriodId, selectPeriod, loadPeriods } = usePeriod()
 const { sortKey, sortDirection, toggleSort, sortRows } = useTableSort()
 const sortedPeriods = computed(() => sortRows(periods.value, (row: any, key: string) => row[key]))
 
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
-const isPeriodOne = computed(() => selectedPeriodId.value === 1)
-const periodReceipts = computed(() => isPeriodOne.value ? receipts : [])
-const periodDistributions = computed(() => isPeriodOne.value ? distributions : [])
+const periodReceipts = computed(() => receipts.value.filter((row: any) => Number(row.periodId || 1) === selectedPeriodId.value))
+const periodDistributions = computed(() => distributions.value.filter((row: any) => Number(row.periodId || 1) === selectedPeriodId.value))
 const moneyIn = computed(() => periodReceipts.value.reduce((sum, row) => sum + row.amountMoney, 0))
 const moneyOut = computed(() => periodDistributions.value.reduce((sum, row) => sum + row.amountMoney, 0))
 const balance = computed(() => moneyIn.value - moneyOut.value)
@@ -166,5 +166,9 @@ function printReport() {
   window.print()
 }
 
-onMounted(() => loadPeriods(authFetch))
+onMounted(async () => {
+  await loadAll(authFetch)
+})
+
+watch(selectedPeriodId, () => loadDashboard(authFetch))
 </script>

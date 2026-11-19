@@ -57,6 +57,10 @@ Bagian ini menjelaskan isi database pada tiap keadaan agar tidak ada data yang m
 - Docker compose up pada volume baru membuat skema dan data seed otomatis. Menjalankan schema sql lagi pada database yang sudah berisi data tidak menghapus data karena schema sql memakai IF NOT EXISTS dan tidak berisi INSERT atau DELETE.
 - Untuk mulai dari kosong pada database yang sudah terisi seed, hapus dulu databasenya lalu jalankan schema sql saja. Pada MySQL manual, jalankan DROP DATABASE zakat_al_fawwaz lalu jalankan schema sql. Pada Docker, jalankan docker compose down -v untuk menghapus volume. Volume baru yang dibuat oleh up berikutnya selalu menjalankan seed otomatis, jadi untuk database kosong, hapus database hasil seed dengan DROP DATABASE lalu jalankan schema sql saja.
 
+## Data Frontend dari API
+
+Frontend membaca semua data dari API backend dan tidak lagi memakai file data contoh di dalam folder frontend. Dashboard memakai angka dari API dashboard, daftar mustahik memakai API mustahik, penerimaan dan penyaluran memakai API receipts dan distributions, periode memakai API periods, dan aturan memakai API rules. Bila API mengembalikan data kosong, aplikasi menampilkan 0 dan bukan data contoh. Bila backend tidak berjalan, aplikasi menampilkan pesan galat dan tabel kosong. File data mustahik dan finance di folder frontend sudah dihapus.
+
 ## Cara Menjalankan Frontend
 
 Buka terminal kedua lalu jalankan perintah berikut.

@@ -55,7 +55,8 @@
       <div class="flex justify-center mt-4">
         <UPagination v-model:page="page" :total="filtered.length" :items-per-page="10" />
       </div>
-      <UAlert v-if="filtered.length === 0" color="info" variant="soft" title="Tidak ada mustahik yang cocok dengan pencarian." icon="i-lucide-info" class="mt-4" />
+      <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-4" />
+      <UAlert v-if="filtered.length === 0 && !loadError" color="info" variant="soft" title="Tidak ada mustahik yang cocok dengan pencarian." icon="i-lucide-info" class="mt-4" />
       <UAlert v-if="editSaved" color="success" variant="soft" :title="'Data tersimpan dengan hasil ' + editSaved + '.'" icon="i-lucide-circle-check" class="mt-4" />
       <UAlert v-if="deleteError" color="error" variant="soft" :title="deleteError" icon="i-lucide-circle-x" class="mt-4" />
     </UCard>
@@ -99,9 +100,9 @@ import { evaluateMustahik } from '~/utils/ruleEngine'
 import { formatMoney } from '~/utils/format'
 import { useTableSort, resultRank } from '~/utils/tableSort'
 
-const { mustahik, periodMustahik, evaluations, deleteMustahik, updateMustahik } = useZakatData()
+const { mustahik, periodMustahik, evaluations, loadError, loadMustahik } = useZakatData()
 const { canInput, canDelete, authFetch } = useSession()
-const { periods, selectedPeriodId } = usePeriod()
+const { periods, selectedPeriodId, loadPeriods } = usePeriod()
 const { rules, loadRules } = useRules()
 const route = useRoute()
 const search = ref('')
@@ -170,7 +171,7 @@ function openEdit(item: any) {
   showEdit.value = true
 }
 
-function submitEdit(form: any) {
+async function submitEdit(form: any) {
   if (!editing.value) return
   editError.value = ''
   editDuplicateWarning.value = ''
@@ -191,11 +192,23 @@ function submitEdit(form: any) {
     editError.value = 'NIK sudah tercatat pada periode yang sama.'
     return
   }
-  updateMustahik(editing.value.id, { ...form, nik: cleanNik })
-  authFetch('/mustahik/' + editing.value.id, { method: 'PUT', body: JSON.stringify({ ...form, nik: cleanNik }) }).catch(() => {})
-  const updated = mustahik.value.find((row: any) => row.id === editing.value.id)
+  let res: Response
+  try {
+    res = await authFetch('/mustahik/' + editing.value.id, { method: 'PUT', body: JSON.stringify({ ...form, nik: cleanNik }) })
+  } catch (error) {
+    editError.value = 'Gagal menyimpan data. Periksa apakah backend berjalan lalu coba lagi.'
+    return
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    editError.value = (body && body.error) || 'Gagal menyimpan data. Pastikan Anda masuk sebagai Bendahara atau Sekretaris.'
+    return
+  }
+  const editedId = editing.value.id
+  await loadMustahik(authFetch)
+  const updated = mustahik.value.find((row: any) => row.id === editedId)
   const niks = mustahik.value.map((row: any) => row.nik)
-  const result = evaluateMustahik(updated, niks, rules.value.length ? rules.value : undefined).result
+  const result = updated ? evaluateMustahik(updated, niks, rules.value.length ? rules.value : undefined).result : ''
   editSaved.value = result
   showEdit.value = false
   editing.value = null
@@ -215,13 +228,15 @@ async function confirmDelete() {
     showDelete.value = false
     return
   }
-  deleteMustahik(toDelete.value.id)
+  await loadMustahik(authFetch)
   showDelete.value = false
   toDelete.value = null
 }
 
-onMounted(() => {
-  loadRules(authFetch)
+onMounted(async () => {
+  await loadRules(authFetch)
+  await loadMustahik(authFetch)
+  await loadPeriods(authFetch)
   const editId = route.query.edit
   if (typeof editId === 'string' && canInput.value) {
     const item = mustahik.value.find((row: any) => row.id === editId)

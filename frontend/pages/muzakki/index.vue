@@ -3,6 +3,7 @@
     <h1 class="text-xl font-bold text-slate-900">Muzakki dan Penerimaan</h1>
     <p class="text-sm text-slate-500 mt-1">Pencatatan penerimaan zakat {{ periodName }} mengikuti buku bendahara. Klik judul kolom untuk mengurutkan.</p>
 
+    <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
       <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada data acuan" icon="i-lucide-wheat" />
       <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
@@ -167,14 +168,14 @@ import { useZakatData, useSession, usePeriod } from '~/composables/useZakat'
 import { formatMoney, formatKg } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
-const { receipts, distributions } = useZakatData()
+const { receipts, distributions, loadError, loadFinance } = useZakatData()
 const { authFetch, canInput, canDelete } = useSession()
-const { periods, selectedPeriodId } = usePeriod()
+const { periods, selectedPeriodId, loadPeriods } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
-const moneyIn = computed(() => receipts.reduce((sum, row) => sum + row.amountMoney, 0))
-const moneyOut = computed(() => distributions.reduce((sum, row) => sum + row.amountMoney, 0))
+const moneyIn = computed(() => receipts.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
+const moneyOut = computed(() => distributions.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
 const balance = computed(() => moneyIn.value - moneyOut.value)
-const riceIn = computed(() => receipts.reduce((sum, row) => sum + row.quantityKg, 0))
+const riceIn = computed(() => receipts.value.reduce((sum, row) => sum + (row.quantityKg || 0), 0))
 
 const muzakki = ref<any[]>([])
 const muzakkiError = ref('')
@@ -190,8 +191,8 @@ const { sortKey: receiptSortKey, sortDirection: receiptSortDirection, toggleSort
 const { sortKey: distributionSortKey, sortDirection: distributionSortDirection, toggleSort: toggleDistributionSort, sortRows: sortDistributionRows } = useTableSort()
 const plainValue = (row: any, key: string) => row[key]
 const muzakkiPage = computed(() => sortMuzakkiRows(muzakki.value, plainValue).slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
-const receiptsPage = computed(() => sortReceiptRows(receipts, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
-const sortedDistributions = computed(() => sortDistributionRows(distributions, plainValue))
+const receiptsPage = computed(() => sortReceiptRows(receipts.value, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
+const sortedDistributions = computed(() => sortDistributionRows(distributions.value, plainValue))
 
 watch(muzakkiSortKey, () => { muzakkiPageNo.value = 1 })
 watch(receiptSortKey, () => { receiptsPageNo.value = 1 })
@@ -287,5 +288,9 @@ async function confirmDelete() {
   await loadMuzakki()
 }
 
-onMounted(loadMuzakki)
+onMounted(async () => {
+  await loadFinance(authFetch)
+  await loadPeriods(authFetch)
+  await loadMuzakki()
+})
 </script>
