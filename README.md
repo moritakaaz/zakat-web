@@ -142,11 +142,12 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 - Muzakki dan Penerimaan untuk pencatatan dan ubah penerimaan dan penyaluran, serta data muzakki yang dapat ditambah, diubah, dan dihapus. Tabel muzakki, penerimaan, dan penyaluran dapat diurutkan dengan klik judul kolom
 - Proses Rule untuk 14 aturan dan jejak Forward Chaining
 - Hasil Prioritas untuk ranking penerima. Tabel ranking dapat diurutkan dengan klik judul kolom, dan ada tombol untuk kembali ke urutan ranking
-- Laporan untuk rekap akhir dan arsip periode
+- Laporan untuk rekap akhir, rekap semua periode, dan arsip periode
 - Glosarium untuk istilah, 14 aturan dari API, arti status hasil, dan tugas tiap peran
 - Pengguna untuk tambah, ubah, nonaktifkan, dan reset kata sandi pengguna, hanya untuk Kepala TPQ
 - Profil Saya untuk ubah nama tampilan dan kata sandi sendiri
 - Menu di layar kecil tampil sebagai drawer dari kiri dengan tombol tutup di kiri atas, sejajar dengan tombol hamburger yang membukanya
+- Menu samping di layar besar dapat diminimize menjadi ikon saja dan pilihan terakhir tersimpan
 
 ## Data Acuan
 

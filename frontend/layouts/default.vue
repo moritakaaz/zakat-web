@@ -3,7 +3,7 @@
     <div class="app-chrome hidden lg:block fixed inset-y-0 left-0 z-40 border-r border-slate-200">
       <AppSidebar />
     </div>
-    <div class="app-content lg:pl-60">
+    <div class="app-content transition-all duration-200" :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'">
       <header class="app-chrome sticky top-0 z-30 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 min-w-0">
           <UButton icon="i-lucide-menu" color="neutral" variant="ghost" class="lg:hidden shrink-0" aria-label="Buka menu" @click="mobileNav = true" />
@@ -39,6 +39,7 @@ import { useSession } from '~/composables/useZakat'
 
 const { user, restore, logout } = useSession()
 const mobileNav = ref(false)
+const sidebarCollapsed = useState<boolean>('sidebar-collapsed', () => false)
 
 onMounted(() => {
   restore()

@@ -82,6 +82,56 @@
     <UCard class="shadow-sm ring-slate-200 mt-4 print-avoid-break">
       <template #header>
         <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+          <UIcon name="i-lucide-layers" class="size-4.5 text-emerald-700" />
+          Rekap semua periode
+        </h2>
+      </template>
+      <p class="text-sm text-slate-500">Total penerimaan dan penyaluran seluruh periode. Angka per periode di halaman lain tetap mengikuti periode yang dipilih.</p>
+      <div class="overflow-x-auto mt-3">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+              <th class="py-2 pr-3 font-medium">Periode</th>
+              <th class="py-2 pr-3 font-medium">Status</th>
+              <th class="py-2 pr-3 font-medium text-right">Uang masuk</th>
+              <th class="py-2 pr-3 font-medium text-right">Uang tersalur</th>
+              <th class="py-2 pr-3 font-medium text-right">Sisa uang</th>
+              <th class="py-2 pr-3 font-medium text-right">Beras masuk</th>
+              <th class="py-2 pr-3 font-medium text-right">Beras tersalur</th>
+              <th class="py-2 font-medium text-right">Sisa beras</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in allPeriodTotals" :key="row.id" class="border-b border-slate-100">
+              <td class="py-2 pr-3 font-medium whitespace-nowrap">{{ row.periodName }}</td>
+              <td class="py-2 pr-3"><UBadge :color="row.status === 'active' ? 'success' : 'neutral'" variant="soft">{{ row.status === 'active' ? 'Aktif' : 'Tutup' }}</UBadge></td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatMoney(row.moneyIn) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatMoney(row.moneyOut) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap font-semibold">{{ formatMoney(row.moneyBalance) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatKg(row.riceIn) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatKg(row.riceOut) }}</td>
+              <td class="py-2 tnum text-right whitespace-nowrap font-semibold">{{ formatKg(row.riceBalance) }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="font-semibold">
+              <td class="py-2 pr-3 whitespace-nowrap" colspan="2">Total semua periode</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatMoney(allTotals.moneyIn) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatMoney(allTotals.moneyOut) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatMoney(allTotals.moneyIn - allTotals.moneyOut) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatKg(allTotals.riceIn) }}</td>
+              <td class="py-2 pr-3 tnum text-right whitespace-nowrap">{{ formatKg(allTotals.riceOut) }}</td>
+              <td class="py-2 tnum text-right whitespace-nowrap">{{ formatKg(allTotals.riceIn - allTotals.riceOut) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p v-if="!allPeriodTotals.length" class="text-sm text-slate-500 mt-3">Belum ada periode.</p>
+    </UCard>
+
+    <UCard class="shadow-sm ring-slate-200 mt-4 print-avoid-break">
+      <template #header>
+        <h2 class="font-semibold flex items-center gap-2 text-slate-900">
           <UIcon name="i-lucide-history" class="size-4.5 text-emerald-700" />
           Riwayat perubahan
         </h2>
@@ -154,6 +204,16 @@ const fitrahMoney = computed(() => moneyByType('Zakat Fitrah'))
 const malMoney = computed(() => moneyByType('Zakat Mal'))
 const infaqMoney = computed(() => moneyByType('Infaq'))
 const layakCount = computed(() => (summary.value['Prioritas 1'] || 0) + (summary.value['Prioritas 2'] || 0) + (summary.value['Prioritas 3'] || 0))
+const allPeriodTotals = computed(() => periods.value.map((period: any) => {
+  const rows = receipts.value.filter((row: any) => Number(row.periodId || 1) === period.id)
+  const outs = distributions.value.filter((row: any) => Number(row.periodId || 1) === period.id)
+  const moneyInTotal = rows.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+  const moneyOutTotal = outs.reduce((sum, row) => sum + (row.amountMoney || 0), 0)
+  const riceInTotal = rows.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
+  const riceOutTotal = outs.reduce((sum, row) => sum + (row.quantityKg || 0), 0)
+  return { id: period.id, periodName: period.periodName, status: period.status, moneyIn: moneyInTotal, moneyOut: moneyOutTotal, moneyBalance: moneyInTotal - moneyOutTotal, riceIn: riceInTotal, riceOut: riceOutTotal, riceBalance: riceInTotal - riceOutTotal }
+}))
+const allTotals = computed(() => allPeriodTotals.value.reduce((sum, row) => ({ moneyIn: sum.moneyIn + row.moneyIn, moneyOut: sum.moneyOut + row.moneyOut, riceIn: sum.riceIn + row.riceIn, riceOut: sum.riceOut + row.riceOut }), { moneyIn: 0, moneyOut: 0, riceIn: 0, riceOut: 0 }))
 const periodColumns = [
   { accessorKey: 'periodName', header: 'Periode' },
   { accessorKey: 'startDate', header: 'Mulai' },

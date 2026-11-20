@@ -80,6 +80,7 @@ Sistem mencakup pendataan mustahik dan muzakki. Sistem mencakup pencatatan pener
 ### 4.7 Laporan dan Arsip
 
 - Laporan penerimaan dan penyaluran per periode
+- Rekap semua periode menampilkan total penerimaan dan penyaluran tiap periode beserta total keseluruhan
 - Laporan daftar penerima berdasarkan prioritas
 - Laporan dapat dicetak
 - Arsip periode lalu dapat dibuka dan dicari
