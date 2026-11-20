@@ -1,26 +1,12 @@
 <template>
   <div>
-    <h1 class="text-xl font-bold text-slate-900">Proses Rule</h1>
-    <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Aturan diperiksa dari urutan terkecil, dari R10 dan R11 sampai R12.</p>
-
-    <UCard class="shadow-sm ring-slate-200 mt-6">
-      <template #header>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="font-semibold flex items-center gap-2 text-slate-900">
-              <UIcon name="i-lucide-scale" class="size-4.5 text-emerald-700" />
-              Basis pengetahuan
-            </h2>
-            <p class="text-sm text-slate-500">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
-          </div>
-          <UButton v-if="canRunRules" icon="i-lucide-play" :loading="running" :disabled="running" @click="run">Jalankan Forward Chaining</UButton>
-        </div>
-      </template>
-      <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
-      <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
-      <RuleList :rules="sortedRules" show-edit class="mt-4" @edit="openEdit" />
-      <p v-if="!canRunRules" class="text-xs text-slate-500 mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
-    </UCard>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">Proses Rule</h1>
+        <p class="text-sm text-slate-500 mt-1">Mesin Rule-Based dengan Forward Chaining. Aturan diperiksa dari urutan terkecil, dari R10 dan R11 sampai R12.</p>
+      </div>
+      <UButton v-if="canRunRules" icon="i-lucide-play" :loading="running" :disabled="running" @click="run">Jalankan Forward Chaining</UButton>
+    </div>
 
     <UCard v-if="running" class="shadow-sm ring-slate-200 mt-4">
       <template #header>
@@ -40,6 +26,51 @@
           <span :class="index === runStep ? 'text-slate-900 font-medium' : 'text-slate-500'">{{ rule.condition }}</span>
         </li>
       </ol>
+    </UCard>
+
+    <UCard v-if="ran" class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <h2 class="font-semibold text-slate-900">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
+      </template>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
+      </div>
+      <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
+      <p v-if="example" class="text-sm text-slate-500 mt-2">Terpenuhi berarti kondisi aturan cocok dengan data mustahik ini dan ikut menentukan hasil. Tidak terpenuhi berarti kondisi aturan tidak cocok, jadi aturan itu tidak dipakai.</p>
+      <div v-if="example" class="flex flex-wrap gap-2 mt-4">
+        <UButton size="xs" :color="exampleFilter === 'Semua' ? 'primary' : 'neutral'" :variant="exampleFilter === 'Semua' ? 'solid' : 'soft'" @click="exampleFilter = 'Semua'">Semua ({{ example.trace.length }})</UButton>
+        <UButton size="xs" color="success" :variant="exampleFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Terpenuhi'">Terpenuhi ({{ exampleFiredCount }})</UButton>
+        <UButton size="xs" color="neutral" :variant="exampleFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ exampleUnfiredCount }})</UButton>
+      </div>
+      <ol v-if="example" class="mt-3 flex flex-col gap-2 text-sm">
+        <li v-for="step in filteredExampleTrace" :key="step.code" class="flex flex-col gap-0.5">
+          <div class="flex gap-2 items-center">
+            <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
+            <UBadge :color="step.fired === true ? 'success' : 'neutral'" variant="soft">{{ step.fired === true ? 'Terpenuhi' : step.fired === false ? 'Tidak terpenuhi' : 'Info' }}</UBadge>
+            <span>{{ ruleText(step.code) || step.note }}</span>
+          </div>
+          <p v-if="ruleText(step.code)" class="text-slate-500 pl-14">{{ step.note }}</p>
+        </li>
+      </ol>
+      <p v-if="example && !filteredExampleTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
+      <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
+      <p v-else class="text-sm text-slate-500 mt-4">Belum ada mustahik pada periode ini, jadi belum ada contoh jejak.</p>
+    </UCard>
+
+    <UCard class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div>
+          <h2 class="font-semibold flex items-center gap-2 text-slate-900">
+            <UIcon name="i-lucide-scale" class="size-4.5 text-emerald-700" />
+            Basis pengetahuan
+          </h2>
+          <p class="text-sm text-slate-500">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
+        </div>
+      </template>
+      <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
+      <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
+      <RuleList :rules="sortedRules" show-edit class="mt-4" @edit="openEdit" />
+      <p v-if="!canRunRules" class="text-xs text-slate-500 mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
     </UCard>
 
     <UModal v-model:open="showEdit" title="Ubah aturan">
@@ -74,35 +105,6 @@
         </div>
       </template>
     </UModal>
-
-    <UCard v-if="ran" class="shadow-sm ring-slate-200 mt-4">
-      <template #header>
-        <h2 class="font-semibold text-slate-900">Hasil proses untuk {{ periodMustahik.length }} KK</h2>
-      </template>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
-      </div>
-      <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
-      <p v-if="example" class="text-sm text-slate-500 mt-2">Terpenuhi berarti kondisi aturan cocok dengan data mustahik ini dan ikut menentukan hasil. Tidak terpenuhi berarti kondisi aturan tidak cocok, jadi aturan itu tidak dipakai.</p>
-      <div v-if="example" class="flex flex-wrap gap-2 mt-4">
-        <UButton size="xs" :color="exampleFilter === 'Semua' ? 'primary' : 'neutral'" :variant="exampleFilter === 'Semua' ? 'solid' : 'soft'" @click="exampleFilter = 'Semua'">Semua ({{ example.trace.length }})</UButton>
-        <UButton size="xs" color="success" :variant="exampleFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Terpenuhi'">Terpenuhi ({{ exampleFiredCount }})</UButton>
-        <UButton size="xs" color="neutral" :variant="exampleFilter === 'Tidak terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Tidak terpenuhi'">Tidak terpenuhi ({{ exampleUnfiredCount }})</UButton>
-      </div>
-      <ol v-if="example" class="mt-3 flex flex-col gap-2 text-sm">
-        <li v-for="step in filteredExampleTrace" :key="step.code" class="flex flex-col gap-0.5">
-          <div class="flex gap-2 items-center">
-            <span class="tnum font-semibold w-12 shrink-0">{{ step.code }}</span>
-            <UBadge :color="step.fired === true ? 'success' : 'neutral'" variant="soft">{{ step.fired === true ? 'Terpenuhi' : step.fired === false ? 'Tidak terpenuhi' : 'Info' }}</UBadge>
-            <span>{{ ruleText(step.code) || step.note }}</span>
-          </div>
-          <p v-if="ruleText(step.code)" class="text-slate-500 pl-14">{{ step.note }}</p>
-        </li>
-      </ol>
-      <p v-if="example && !filteredExampleTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
-      <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
-      <p v-else class="text-sm text-slate-500 mt-4">Belum ada mustahik pada periode ini, jadi belum ada contoh jejak.</p>
-    </UCard>
   </div>
 </template>
 
