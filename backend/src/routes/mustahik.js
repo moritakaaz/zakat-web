@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
   const rows = store.mustahik.filter((item) => {
     if (periodId && Number(item.periodId || 1) !== periodId) return false
     if (!query) return true
-    return [item.fullName, item.nik, item.address, item.occupation, item.specialStatus]
+    return [item.id, item.fullName, item.nik, item.address, item.occupation, item.specialStatus]
       .join(' ')
       .toLowerCase()
       .includes(query)

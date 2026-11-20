@@ -73,6 +73,12 @@ const server = app.listen(0, async () => {
     const bendahara = await login(port, 'bendahara@contoh.id', 'bendahara123')
     const kepala = await login(port, 'kepala@contoh.id', 'kepala123')
 
+    // Search finds a household by its code.
+    const byCode = await request(port, 'GET', '/api/mustahik?search=t01', null, bendahara)
+    assert.strictEqual(byCode.status, 200)
+    assert.strictEqual(byCode.body.total, 1)
+    assert.strictEqual(byCode.body.data[0].id, 'T01')
+
     // The audit log needs a token.
     const noToken = await request(port, 'GET', '/api/audit-log', null, null)
     assert.strictEqual(noToken.status, 401)

@@ -13,7 +13,7 @@
 
     <UCard class="shadow-sm ring-slate-200 mt-6">
       <div class="flex flex-col sm:flex-row gap-2 mb-4">
-        <UInput v-model="search" placeholder="Cari nama, alamat, atau pekerjaan" icon="i-lucide-search" class="w-full" />
+        <UInput v-model="search" placeholder="Cari kode, nama, NIK, alamat, atau pekerjaan" icon="i-lucide-search" class="w-full" />
         <USelect v-model="filterResult" :items="filterOptions" placeholder="Semua hasil" class="w-full sm:w-56" />
       </div>
 
@@ -200,7 +200,7 @@ const filtered = computed(() => {
   return rows.value.filter((item) => {
     if (filterResult.value && filterResult.value !== 'Semua hasil' && item.result !== filterResult.value) return false
     if (!query) return true
-    return [item.fullName, item.nik, item.address, item.occupation].join(' ').toLowerCase().includes(query)
+    return [item.id, item.fullName, item.nik, item.address, item.occupation].join(' ').toLowerCase().includes(query)
   })
 })
 const sorted = computed(() => sortRows(filtered.value, sortValue))
