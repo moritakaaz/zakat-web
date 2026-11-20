@@ -35,8 +35,10 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard v-for="(count, label) in runSummary" :key="label" :label="label" :value="String(count)" hint="KK" :icon="summaryCardMeta(label).icon" :icon-class="summaryCardMeta(label).iconClass" />
       </div>
-      <p v-if="example" class="text-sm text-slate-500 mt-4">Contoh jejak untuk mustahik pertama pada periode ini ada di bawah. Jejak lengkap per KK dapat dibuka dari halaman Data Mustahik.</p>
-      <p v-if="example" class="text-sm text-slate-500 mt-2">Terpenuhi berarti kondisi aturan cocok dengan data mustahik ini dan ikut menentukan hasil. Tidak terpenuhi berarti kondisi aturan tidak cocok, jadi aturan itu tidak dipakai.</p>
+      <p v-if="example" class="text-sm font-semibold text-slate-900 mt-4">Jejak Forward Chaining untuk satu KK</p>
+      <p v-if="example" class="text-sm text-slate-500 mt-1">Proses di atas menilai semua {{ periodMustahik.length }} KK pada periode ini. Pilih satu KK di bawah untuk melihat aturan mana yang terpenuhi untuk KK tersebut. Jejak lengkap tiap KK juga bisa dibuka dari halaman Data Mustahik.</p>
+      <USelect v-if="example" v-model="exampleId" :items="exampleOptions" value-key="value" label-key="label" class="w-full sm:w-80 mt-3" />
+      <p v-if="example" class="text-sm text-slate-500 mt-4">Terpenuhi berarti kondisi aturan cocok dengan data mustahik ini dan ikut menentukan hasil. Tidak terpenuhi berarti kondisi aturan tidak cocok, jadi aturan itu tidak dipakai.</p>
       <div v-if="example" class="flex flex-wrap gap-2 mt-4">
         <UButton size="xs" :color="exampleFilter === 'Semua' ? 'primary' : 'neutral'" :variant="exampleFilter === 'Semua' ? 'solid' : 'soft'" @click="exampleFilter = 'Semua'">Semua ({{ example.trace.length }})</UButton>
         <UButton size="xs" color="success" :variant="exampleFilter === 'Terpenuhi' ? 'solid' : 'soft'" @click="exampleFilter = 'Terpenuhi'">Terpenuhi ({{ exampleFiredCount }})</UButton>
@@ -53,7 +55,7 @@
         </li>
       </ol>
       <p v-if="example && !filteredExampleTrace.length" class="text-sm text-slate-500 mt-3">Tidak ada aturan pada filter ini.</p>
-      <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan {{ example.fullName }} adalah {{ example.result }}.</p>
+      <p v-if="example" class="text-sm mt-3 font-semibold">Kesimpulan untuk {{ example.fullName }} adalah {{ example.result }}.</p>
       <p v-else class="text-sm text-slate-500 mt-4">Belum ada mustahik pada periode ini, jadi belum ada contoh jejak.</p>
     </UCard>
 
@@ -138,8 +140,17 @@ const numericFields = [
   { key: 'schoolMin', label: 'Anak sekolah minimum' }
 ]
 
+const exampleId = ref('')
+const exampleOptions = computed(() => periodMustahik.value.map((row: any) => ({ label: row.id + ' - ' + row.fullName, value: row.id })))
+watch(periodMustahik, (list: any[]) => {
+  if (!list.length) {
+    exampleId.value = ''
+    return
+  }
+  if (!list.some((row: any) => row.id === exampleId.value)) exampleId.value = list[0].id
+}, { immediate: true })
 const example = computed(() => {
-  const item = periodMustahik.value[0]
+  const item = periodMustahik.value.find((row: any) => row.id === exampleId.value) || periodMustahik.value[0]
   const niks = mustahik.value.map((row: any) => row.nik)
   if (!item) return null
   return evaluateMustahik(item, niks, rules.value.length ? rules.value : undefined)
