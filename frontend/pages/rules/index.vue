@@ -13,13 +13,33 @@
             </h2>
             <p class="text-sm text-slate-500">14 aturan dari PRD bagian 5 dan file data acuan. Ambang dan status aktif dapat diubah oleh Bendahara tanpa mengubah kode.</p>
           </div>
-          <UButton v-if="canRunRules" icon="i-lucide-play" @click="run">Jalankan Forward Chaining</UButton>
+          <UButton v-if="canRunRules" icon="i-lucide-play" :loading="running" :disabled="running" @click="run">Jalankan Forward Chaining</UButton>
         </div>
       </template>
       <p v-if="loadError" class="text-sm text-red-600 mt-3">{{ loadError }}</p>
       <p v-if="saveMessage" class="text-sm text-emerald-700 mt-3">{{ saveMessage }}</p>
       <RuleList :rules="sortedRules" show-edit class="mt-4" @edit="openEdit" />
       <p v-if="!canRunRules" class="text-xs text-slate-500 mt-3">Hanya Bendahara yang dapat menjalankan proses dan mengubah aturan.</p>
+    </UCard>
+
+    <UCard v-if="running" class="shadow-sm ring-slate-200 mt-4">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-semibold text-slate-900">Menjalankan Forward Chaining</h2>
+          <p class="text-sm text-slate-500">Aturan {{ Math.min(runStep + 1, sortedRules.length) }} dari {{ sortedRules.length }}</p>
+        </div>
+      </template>
+      <UProgress :value="runStep" :max="sortedRules.length" class="mt-1" />
+      <p class="text-sm text-slate-500 mt-3">Visualisasi urutan pemeriksaan aturan oleh mesin.</p>
+      <ol class="mt-3 flex flex-col gap-2">
+        <li v-for="(rule, index) in sortedRules" :key="rule.code" class="flex items-center gap-2 text-sm">
+          <UIcon v-if="index < runStep" name="i-lucide-check" class="size-4 text-emerald-600 shrink-0" />
+          <UIcon v-else-if="index === runStep" name="i-lucide-loader-circle" class="size-4 text-emerald-600 animate-spin shrink-0" />
+          <UIcon v-else name="i-lucide-circle" class="size-4 text-slate-300 shrink-0" />
+          <span class="tnum font-semibold w-12 shrink-0">{{ rule.code }}</span>
+          <span :class="index === runStep ? 'text-slate-900 font-medium' : 'text-slate-500'">{{ rule.condition }}</span>
+        </li>
+      </ol>
     </UCard>
 
     <UModal v-model:open="showEdit" title="Ubah aturan">
@@ -97,6 +117,8 @@ const { rules, loadRules } = useRules()
 const { selectedPeriodId } = usePeriod()
 const sortedRules = computed(() => [...rules.value].sort((a: any, b: any) => (a.order - b.order) || String(a.code).localeCompare(String(b.code), 'id')))
 const ran = ref(false)
+const running = ref(false)
+const runStep = ref(0)
 const runSummary = ref<Record<string, number>>({})
 const loadError = ref('')
 const saveMessage = ref('')
@@ -161,15 +183,24 @@ async function saveEdit() {
 }
 
 async function run() {
+  if (running.value) return
+  running.value = true
   ran.value = false
+  runStep.value = 0
   const res = await authFetch('/rules/evaluate', { method: 'POST', body: JSON.stringify({ periodId: selectedPeriodId.value }) })
+  let nextSummary = summary.value
   if (res.ok) {
     const body = await res.json()
-    runSummary.value = body.summary
-  } else {
-    runSummary.value = summary.value
+    nextSummary = body.summary
   }
+  for (let index = 0; index < sortedRules.value.length; index++) {
+    runStep.value = index
+    await new Promise((resolve) => setTimeout(resolve, 220))
+  }
+  runStep.value = sortedRules.value.length
+  runSummary.value = nextSummary
   ran.value = true
+  running.value = false
 }
 
 onMounted(async () => {

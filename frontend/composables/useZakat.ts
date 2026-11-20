@@ -173,7 +173,7 @@ export function useZakatData() {
     ])
   }
 
-  return { mustahik, receipts, distributions, periodMustahik, evaluations, summary, dashboard, loadError, loadMustahik, loadFinance, loadDashboard, loadAll }
+  return { mustahik, receipts, distributions, periodMustahik, periodReceipts, periodDistributions, evaluations, summary, dashboard, loadError, loadMustahik, loadFinance, loadDashboard, loadAll }
 }
 
 export function useSession() {

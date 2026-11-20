@@ -5,9 +5,9 @@
 
     <UAlert v-if="loadError" color="error" variant="soft" :title="loadError" icon="i-lucide-circle-x" class="mt-6" />
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-      <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada data acuan" icon="i-lucide-wheat" />
+      <StatCard label="Beras masuk" :value="formatKg(riceIn)" hint="Pada periode ini" icon="i-lucide-wheat" />
       <StatCard label="Uang masuk" :value="formatMoney(moneyIn)" hint="Fitrah, mal, dan infaq" icon="i-lucide-wallet" />
-      <StatCard label="Baris penerimaan" :value="String(receipts.length)" hint="Baris pada data acuan" icon="i-lucide-receipt" />
+      <StatCard label="Baris penerimaan" :value="String(periodReceipts.length)" hint="Baris pada periode ini" icon="i-lucide-receipt" />
       <StatCard label="Sisa saldo uang" :value="formatMoney(balance)" hint="Setelah penyaluran" icon="i-lucide-hand-coins" />
     </div>
 
@@ -53,7 +53,8 @@
       <div class="flex justify-center mt-4">
         <UPagination v-model:page="muzakkiPageNo" :total="muzakki.length" :items-per-page="10" />
       </div>
-      <UAlert v-if="!muzakki.length" color="info" variant="soft" title="Data muzakki dari server belum dimuat. Pastikan backend berjalan dan Anda sudah masuk." icon="i-lucide-info" class="mt-4" />
+      <UAlert v-if="!muzakkiLoaded" color="info" variant="soft" title="Data muzakki dari server belum dimuat. Pastikan backend berjalan dan Anda sudah masuk." icon="i-lucide-info" class="mt-4" />
+      <UAlert v-else-if="!muzakki.length" color="info" variant="soft" title="Belum ada muzakki pada periode ini." icon="i-lucide-info" class="mt-4" />
     </UCard>
 
     <UModal v-model:open="showDelete" title="Hapus muzakki" :description="'Hapus ' + (toDelete?.fullName || '') + ' (' + (toDelete?.id || '') + ') dari data periode ini? Tindakan ini tidak dapat dibatalkan.'">
@@ -99,6 +100,9 @@
       </template>
       <div class="overflow-x-auto">
         <UTable :data="receiptsPage" :columns="receiptColumns">
+          <template #date-cell="{ row }">
+            <span>{{ formatDate(row.original.date) }}</span>
+          </template>
           <template #date-header>
             <SortButton label="Tanggal" column="date" :sort-key="receiptSortKey" :sort-direction="receiptSortDirection" @toggle="toggleReceiptSort" />
           </template>
@@ -131,7 +135,7 @@
         </UTable>
       </div>
       <div class="flex justify-center mt-4">
-        <UPagination v-model:page="receiptsPageNo" :total="receipts.length" :items-per-page="10" />
+        <UPagination v-model:page="receiptsPageNo" :total="periodReceipts.length" :items-per-page="10" />
       </div>
     </UCard>
 
@@ -181,6 +185,9 @@
       </template>
       <div class="overflow-x-auto">
         <UTable :data="sortedDistributions" :columns="distributionColumns">
+          <template #date-cell="{ row }">
+            <span>{{ formatDate(row.original.date) }}</span>
+          </template>
           <template #date-header>
             <SortButton label="Tanggal" column="date" :sort-key="distributionSortKey" :sort-direction="distributionSortDirection" @toggle="toggleDistributionSort" />
           </template>
@@ -258,20 +265,21 @@
 
 <script setup lang="ts">
 import { useZakatData, useSession, usePeriod, useRules } from '~/composables/useZakat'
-import { formatMoney, formatKg } from '~/utils/format'
+import { formatMoney, formatKg, formatDate } from '~/utils/format'
 import { useTableSort } from '~/utils/tableSort'
 
-const { receipts, distributions, periodMustahik, evaluations, loadError, loadFinance, loadMustahik } = useZakatData()
+const { receipts, periodReceipts, periodDistributions, periodMustahik, evaluations, loadError, loadFinance, loadMustahik } = useZakatData()
 const { authFetch, canInput, canDelete, isBendahara } = useSession()
 const { loadRules } = useRules()
 const { periods, selectedPeriodId, loadPeriods } = usePeriod()
 const periodName = computed(() => periods.value.find((row) => row.id === selectedPeriodId.value)?.periodName || '')
-const moneyIn = computed(() => receipts.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
-const moneyOut = computed(() => distributions.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
+const moneyIn = computed(() => periodReceipts.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
+const moneyOut = computed(() => periodDistributions.value.reduce((sum, row) => sum + (row.amountMoney || 0), 0))
 const balance = computed(() => moneyIn.value - moneyOut.value)
-const riceIn = computed(() => receipts.value.reduce((sum, row) => sum + (row.quantityKg || 0), 0))
+const riceIn = computed(() => periodReceipts.value.reduce((sum, row) => sum + (row.quantityKg || 0), 0))
 
 const muzakki = ref<any[]>([])
+const muzakkiLoaded = ref(false)
 const muzakkiError = ref('')
 const showForm = ref(false)
 const showDelete = ref(false)
@@ -302,8 +310,8 @@ const muzakkiWithTotals = computed(() => muzakki.value.map((row) => {
   return { ...row, totalMoney: total.money, totalRice: total.rice }
 }))
 const muzakkiPage = computed(() => sortMuzakkiRows(muzakkiWithTotals.value, plainValue).slice((muzakkiPageNo.value - 1) * 10, muzakkiPageNo.value * 10))
-const receiptsPage = computed(() => sortReceiptRows(receipts.value, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
-const sortedDistributions = computed(() => sortDistributionRows(distributions.value, plainValue))
+const receiptsPage = computed(() => sortReceiptRows(periodReceipts.value, plainValue).slice((receiptsPageNo.value - 1) * 10, receiptsPageNo.value * 10))
+const sortedDistributions = computed(() => sortDistributionRows(periodDistributions.value, plainValue))
 
 watch(muzakkiSortKey, () => { muzakkiPageNo.value = 1 })
 watch(receiptSortKey, () => { receiptsPageNo.value = 1 })
@@ -360,6 +368,7 @@ async function loadMuzakki() {
     if (!res.ok) return
     const body = await res.json()
     muzakki.value = body.data || []
+    muzakkiLoaded.value = true
   } catch (error) {
     // Table stays empty when the API is not reachable.
   }
