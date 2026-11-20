@@ -147,7 +147,7 @@ Penyaluran hanya dapat dicatat oleh Bendahara setelah hasil prioritas periode it
 - Pengguna untuk tambah, ubah, nonaktifkan, dan reset kata sandi pengguna, hanya untuk Kepala TPQ
 - Profil Saya untuk ubah nama tampilan dan kata sandi sendiri
 - Menu di layar kecil tampil sebagai drawer dari kiri dengan tombol tutup di kiri atas, sejajar dengan tombol hamburger yang membukanya
-- Menu samping di layar besar dapat diminimize menjadi ikon saja dan pilihan terakhir tersimpan
+- Menu samping di layar besar dapat diminimize menjadi ikon saja dan pilihan terakhir tersimpan. Saat minimize, arahkan kursor ke ikon untuk melihat label menunya
 
 ## Data Acuan
 

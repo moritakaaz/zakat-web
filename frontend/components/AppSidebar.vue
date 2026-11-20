@@ -2,26 +2,27 @@
   <aside :class="fullWidth ? 'w-full' : (mini ? 'w-16' : 'w-60')" class="flex h-full shrink-0 flex-col bg-white p-4 transition-all duration-200">
     <div v-if="showHeader" class="px-2 pb-4 border-b border-slate-200">
       <div v-if="mini" class="flex justify-center">
-        <UIcon name="i-lucide-hand-heart" class="size-6 text-emerald-700" />
+        <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-chevrons-right" title="Perluas menu" aria-label="Perluas menu" class="px-0" @click="toggleSidebar" />
       </div>
       <template v-else>
-        <p class="font-bold text-emerald-700">Zakat Al-Fawwaz</p>
+        <div class="flex items-center justify-between gap-2">
+          <p class="font-bold text-emerald-700">Zakat Al-Fawwaz</p>
+          <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-chevrons-left" title="Minimize menu" aria-label="Minimize menu" @click="toggleSidebar" />
+        </div>
         <p class="text-xs text-slate-500 mt-1">Yayasan Pendidikan Al-Quran Al-Fawwaz</p>
       </template>
     </div>
     <nav class="mt-4 flex flex-col gap-1 text-sm">
-      <NuxtLink v-for="item in visibleMenu" :key="item.to" :to="item.to" :title="mini ? item.label : undefined" class="px-3 py-2 rounded-md hover:bg-slate-100 flex items-center gap-2 text-slate-700" :class="mini ? 'justify-center px-2' : ''" active-class="bg-emerald-100 text-emerald-800 font-semibold" @click="$emit('navigate')">
+      <NuxtLink v-for="item in visibleMenu" :key="item.to" :to="item.to" class="group relative px-3 py-2 rounded-md hover:bg-slate-100 flex items-center gap-2 text-slate-700" :class="mini ? 'justify-center px-2' : ''" active-class="bg-emerald-100 text-emerald-800 font-semibold" @click="$emit('navigate')">
         <UIcon :name="item.icon" class="size-4.5 shrink-0" />
         <span v-if="!mini">{{ item.label }}</span>
+        <span v-if="mini" class="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-900 shadow-lg ring-1 ring-slate-200 opacity-0 transition-opacity duration-150 group-hover:opacity-100">{{ item.label }}</span>
       </NuxtLink>
     </nav>
     <div v-if="!mini" class="mt-6 px-2">
       <p class="text-xs text-slate-500">Periode</p>
       <USelect :model-value="selectedPeriodId" :items="periods" value-key="id" label-key="periodName" class="w-full mt-2" @update:model-value="changePeriod" />
       <p class="text-xs text-slate-500 mt-2">{{ activePeriod?.periodName }} - {{ activePeriod?.status === 'closed' ? 'Tutup' : 'Aktif' }}</p>
-    </div>
-    <div v-if="!fullWidth" class="mt-auto px-2 pt-4">
-      <UButton color="neutral" variant="ghost" size="sm" :icon="collapsed ? 'i-lucide-chevrons-right' : 'i-lucide-chevrons-left'" :label="mini ? undefined : 'Minimize'" :aria-label="collapsed ? 'Perluas menu' : 'Minimize menu'" class="w-full" :class="mini ? 'justify-center px-0' : 'justify-start'" @click="toggleSidebar" />
     </div>
   </aside>
 </template>
